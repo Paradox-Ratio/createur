@@ -1,0 +1,2763 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Créateur Pro — Téléprompteur & Waveform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B0D14; --panel:#12141F; --panel2:#171A28; --panel3:#1D2032;
+  --accent:#38BDF8; --accent2:#8B6BD9; --green:#37D67A; --red:#F0495B; --amber:#E3B341;
+  --text:#F3F1EA; --text-dim:#9799A8; --line:#242737;
+  --grad: linear-gradient(135deg,#38BDF8,#8B6BD9);
+}
+*{box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent;}
+html,body{height:100%;}
+body{
+  font-family:'Inter',system-ui,sans-serif; background:var(--bg); color:var(--text);
+  display:flex; flex-direction:column; min-height:100vh;
+  background-image:
+    radial-gradient(ellipse 900px 500px at 15% -10%, rgba(139,107,217,.16), transparent),
+    radial-gradient(ellipse 900px 500px at 100% 0%, rgba(56,189,248,.12), transparent);
+  background-attachment:fixed;
+}
+h1,h2,h3,.disp{font-family:'Space Grotesk',sans-serif;}
+button, select, input{font-family:inherit;}
+
+/* ---------- Header ---------- */
+header{
+  background:rgba(18,20,31,.85); backdrop-filter:blur(14px);
+  padding:14px 22px; border-bottom:1px solid var(--line);
+  display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;
+  position:sticky; top:0; z-index:50;
+}
+.brand{display:flex; align-items:center; gap:11px;}
+.brand-mark{
+  width:38px; height:38px; border-radius:11px; flex-shrink:0;
+  background:var(--grad); display:flex; align-items:center; justify-content:center; font-size:18px;
+  box-shadow:0 4px 14px rgba(56,189,248,.25);
+}
+.brand-txt{display:flex; flex-direction:column; line-height:1.15;}
+.brand-txt b{font-size:15px; font-weight:700;}
+.brand-txt span{font-size:10.5px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.09em;}
+
+/* Dropdown de navigation (évite le débordement horizontal) */
+.tab-dropdown{position:relative;}
+.tab-dropdown-btn{
+  display:flex; align-items:center; gap:10px; background:var(--panel2); color:var(--text);
+  border:1px solid var(--line); padding:10px 14px; border-radius:12px; cursor:pointer;
+  font-weight:600; font-size:13px; min-width:190px; justify-content:space-between;
+}
+.tab-dropdown-btn:hover{background:var(--panel3);}
+.tab-dropdown-btn .chevron{color:var(--text-dim); font-size:11px; transition:transform .15s;}
+.tab-dropdown.open .tab-dropdown-btn .chevron{transform:rotate(180deg);}
+.tab-dropdown-menu{
+  position:absolute; top:calc(100% + 8px); right:0; min-width:100%; width:max-content;
+  background:var(--panel2); border:1px solid var(--line); border-radius:12px; padding:5px;
+  box-shadow:0 16px 40px rgba(0,0,0,.5); z-index:60;
+  display:none; flex-direction:column; gap:2px;
+}
+.tab-dropdown.open .tab-dropdown-menu{display:flex;}
+.tab-btn{
+  background:transparent; color:var(--text-dim); border:none; text-align:left;
+  padding:10px 14px; border-radius:9px; cursor:pointer; font-weight:600; font-size:13px;
+  transition:.15s; display:flex; align-items:center; gap:9px; white-space:nowrap;
+}
+.tab-btn.active{background:var(--grad); color:#0B0D14;}
+.tab-btn:not(.active):hover{color:var(--text); background:var(--panel3);}
+@media(max-width:640px){
+  .tab-dropdown-menu{right:0; left:auto;}
+  .tab-dropdown-btn{min-width:0; width:100%;}
+}
+
+/* ---------- Layout ---------- */
+main{flex:1; padding:24px 18px 90px; max-width:1280px; width:100%; margin:0 auto;}
+.tab-content{display:none; animation:fadein .25s ease;}
+.tab-content.active{display:block;}
+@keyframes fadein{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+.card{
+  background:var(--panel); border:1px solid var(--line); border-radius:16px;
+  padding:22px; margin-bottom:18px;
+}
+.card h2{font-size:14.5px; color:var(--text); margin-bottom:16px; display:flex; align-items:center; gap:9px;}
+.card h2 .n{
+  width:22px; height:22px; border-radius:7px; background:var(--panel3); color:var(--accent);
+  display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:700;
+}
+.card .sub{font-size:12px; color:var(--text-dim); margin:-10px 0 16px; line-height:1.5;}
+
+label{display:block; margin-bottom:7px; color:var(--text-dim); font-size:11px; font-weight:600;
+  text-transform:uppercase; letter-spacing:.04em; display:flex; justify-content:space-between; align-items:center;}
+label .val{color:var(--accent); font-weight:700; text-transform:none; letter-spacing:0; font-size:12.5px;}
+input[type=text], textarea, select{
+  width:100%; padding:11px 13px; border-radius:10px; border:1px solid var(--line);
+  background:#191C29; color:var(--text); font-size:13.5px; margin-bottom:14px; transition:.15s;
+}
+input[type=text]:focus, textarea:focus, select:focus{outline:none; border-color:var(--accent);}
+textarea{resize:vertical; line-height:1.6;}
+input[type=file]{
+  width:100%; padding:10px; border-radius:10px; border:1px dashed var(--line);
+  background:var(--panel2); color:var(--text-dim); font-size:12.5px; margin-bottom:8px; cursor:pointer;
+}
+input[type=range]{
+  -webkit-appearance:none; width:100%; height:5px; border-radius:4px; background:var(--panel3); outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:18px; height:18px; border-radius:50%;
+  background:var(--grad); cursor:pointer; border:2px solid #0B0D14; box-shadow:0 0 0 1px var(--accent);
+}
+input[type=color]{width:44px; height:38px; border-radius:9px; border:1px solid var(--line); background:none; padding:0; cursor:pointer;}
+
+.field{margin-bottom:14px;}
+.row{display:flex; gap:12px; flex-wrap:wrap;}
+.row > *{flex:1; min-width:120px;}
+
+/* Segmented control */
+.seg{display:flex; background:var(--panel2); border-radius:10px; padding:3px; gap:3px; margin-bottom:14px;}
+.seg button{
+  flex:1; padding:9px 6px; border:none; background:transparent; color:var(--text-dim);
+  font-size:12px; font-weight:600; border-radius:8px; cursor:pointer;
+}
+.seg button.active{background:var(--grad); color:#0B0D14;}
+
+/* Toggle */
+.toggle-row{display:flex; align-items:center; justify-content:space-between; padding:6px 0; margin-bottom:6px;}
+.toggle-row .t-label{font-size:13px; font-weight:500; color:var(--text);}
+.toggle-row .t-hint{font-size:11px; color:var(--text-dim); margin-top:1px;}
+.switch{position:relative; width:42px; height:24px; flex-shrink:0;}
+.switch input{opacity:0; width:0; height:0; position:absolute;}
+.slider-el{position:absolute; inset:0; background:var(--panel3); border:1px solid var(--line); border-radius:24px; cursor:pointer; transition:.15s;}
+.slider-el::before{content:""; position:absolute; width:17px; height:17px; left:2px; top:2px; background:var(--text-dim); border-radius:50%; transition:.15s;}
+.switch input:checked + .slider-el{background:rgba(56,189,248,.25); border-color:var(--accent);}
+.switch input:checked + .slider-el::before{transform:translateX(18px); background:var(--accent);}
+
+/* Buttons */
+.btn{
+  background:var(--grad); color:#0B0D14; border:none; padding:12px 18px; border-radius:11px;
+  font-weight:700; font-size:13.5px; cursor:pointer; display:inline-flex; align-items:center;
+  justify-content:center; gap:8px; transition:.15s;
+}
+.btn:active{transform:scale(.97);}
+.btn:disabled{opacity:.35; cursor:not-allowed;}
+.btn.block{width:100%;}
+.btn.ghost{background:var(--panel3); color:var(--text); border:1px solid var(--line);}
+.btn.danger{background:var(--red); color:#fff;}
+.btn.success{background:var(--green); color:#0B0D14;}
+.btn.sm{padding:9px 13px; font-size:12px;}
+
+.badge{
+  display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:600;
+  padding:5px 10px; border-radius:20px; border:1px solid var(--line); color:var(--text-dim);
+}
+.badge.ok{color:var(--green); border-color:rgba(55,214,122,.35); background:rgba(55,214,122,.08);}
+.badge.warn{color:var(--amber); border-color:rgba(227,179,65,.35); background:rgba(227,179,65,.08);}
+.badge.err{color:var(--red); border-color:rgba(240,73,91,.35); background:rgba(240,73,91,.08);}
+.badge .dot{width:6px; height:6px; border-radius:50%; background:currentColor;}
+
+/* ============ TELEPROMPTEUR ============ */
+.prompter-layout{display:grid; grid-template-columns:1fr; gap:18px;}
+@media(min-width:960px){ .prompter-layout{grid-template-columns:360px 1fr;} }
+
+.prompter-view{
+  position:relative; height:560px; background:#000; border-radius:18px;
+  border:1px solid var(--line); overflow:hidden; display:flex; flex-direction:column;
+  box-shadow:0 20px 50px rgba(0,0,0,.4);
+}
+.prompter-view.fullscreen-active{height:100vh; border-radius:0;}
+#prompter-video-bg{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none; transform:scaleX(-1);}
+.prompter-scroll{position:absolute; inset:0; overflow:hidden;}
+.prompter-overlay-line{
+  position:absolute; top:50%; left:0; right:0; height:64px; transform:translateY(-50%);
+  background:rgba(56,189,248,.12); border-top:2px solid rgba(56,189,248,.7); border-bottom:2px solid rgba(56,189,248,.7);
+  pointer-events:none; z-index:10;
+}
+.prompter-content{
+  padding:260px 40px; text-align:center; font-weight:700; line-height:1.6;
+  white-space:pre-wrap; will-change:transform;
+}
+.prompter-content.align-left{text-align:left;}
+.prompter-content.mirror{transform:scaleX(-1);}
+.prompter-hud{
+  position:absolute; top:14px; left:14px; right:14px; display:flex; justify-content:space-between;
+  align-items:center; z-index:20; gap:10px; flex-wrap:wrap;
+}
+.prompter-progress-wrap{position:absolute; bottom:0; left:0; right:0; height:4px; background:rgba(255,255,255,.08); z-index:20;}
+.prompter-progress-bar{height:100%; width:0%; background:var(--grad); transition:width .1s linear;}
+.countdown-overlay{
+  position:absolute; inset:0; display:none; align-items:center; justify-content:center;
+  background:rgba(0,0,0,.7); z-index:30; font-family:'Space Grotesk',sans-serif; font-size:110px; font-weight:700;
+  color:var(--accent);
+}
+.prompter-controls-bar{display:flex; gap:10px; flex-wrap:wrap; margin-top:14px;}
+.prompter-controls-bar .btn{flex:1; min-width:130px;}
+
+/* ============ WAVEFORM ============ */
+.wave-layout{display:grid; grid-template-columns:1fr; gap:18px;}
+@media(min-width:960px){ .wave-layout{grid-template-columns:360px 1fr;} }
+.wave-preview{display:flex; flex-direction:column; align-items:center; gap:14px;}
+.canvas-wrap{
+  position:relative; width:100%; max-width:480px; border-radius:16px; overflow:hidden;
+  box-shadow:0 20px 50px rgba(0,0,0,.45); border:1px solid var(--line); background:#000;
+}
+canvas{display:block; width:100%; height:auto;}
+.playbar{
+  width:100%; max-width:480px; background:var(--panel); border:1px solid var(--line);
+  border-radius:14px; padding:14px 16px;
+}
+.playbar .time-row{display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim); margin-top:8px;}
+.seekbar{width:100%; height:5px; border-radius:4px; background:var(--panel3); position:relative; cursor:pointer;}
+.seekbar .fill{position:absolute; left:0; top:0; height:100%; background:var(--grad); border-radius:4px; width:0%;}
+.playbar-controls{display:flex; align-items:center; gap:12px;}
+.playbar-controls .btn{padding:10px; border-radius:50%; width:40px; height:40px;}
+.vol-wrap{display:flex; align-items:center; gap:8px; flex:1;}
+.vol-wrap input{margin:0;}
+
+video.export-preview{width:100%; max-width:480px; border-radius:14px; border:1px solid var(--line); margin-top:6px; display:none;}
+
+.export-progress-wrap{width:100%; height:8px; background:var(--panel3); border-radius:6px; overflow:hidden; margin-top:10px; display:none;}
+.export-progress-bar{height:100%; width:0%; background:var(--grad); transition:width .15s linear;}
+
+.hint-box{
+  display:flex; gap:9px; font-size:12px; color:var(--text-dim); background:var(--panel2);
+  padding:11px 13px; border-radius:11px; line-height:1.5; margin-top:4px;
+}
+.hint-box b{color:var(--text);}
+
+.support-warning{
+  background:rgba(240,73,91,.1); border:1px solid rgba(240,73,91,.3); color:#f4a3ac;
+  padding:12px 14px; border-radius:12px; font-size:12.5px; margin-bottom:16px; display:none; line-height:1.5;
+}
+
+footer{text-align:center; padding:20px; font-size:11.5px; color:var(--text-dim);}
+
+@media(max-width:640px){
+  .prompter-view{height:440px;}
+  header{padding:12px 14px;}
+  main{padding:18px 12px 80px;}
+}
+
+/* ============ RESTRUCTURATION : EN-TÊTES D'ONGLET ============ */
+.tab-head{
+  display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  margin-bottom:20px; padding-bottom:16px; border-bottom:1px solid var(--line);
+}
+.tab-head .th-left{display:flex; gap:14px; align-items:flex-start;}
+.tab-head .th-icon{
+  width:46px; height:46px; border-radius:13px; background:var(--panel2); border:1px solid var(--line);
+  display:flex; align-items:center; justify-content:center; font-size:22px; flex-shrink:0;
+}
+.tab-head h1{font-size:19px; font-weight:700; margin-bottom:3px;}
+.tab-head p{font-size:12.5px; color:var(--text-dim); max-width:520px; line-height:1.5;}
+.tab-head .th-badges{display:flex; gap:8px; flex-wrap:wrap;}
+
+/* Section label inside a stacked control column */
+.section-label{
+  font-family:'Space Grotesk',sans-serif; font-size:11px; font-weight:700; color:var(--text-dim);
+  text-transform:uppercase; letter-spacing:.1em; margin:22px 0 10px; display:flex; align-items:center; gap:8px;
+}
+.section-label:first-child{margin-top:0;}
+.section-label::after{content:""; flex:1; height:1px; background:var(--line);}
+
+/* Generic two-column studio layout w/ sticky preview */
+.studio-layout{display:grid; grid-template-columns:1fr; gap:18px; align-items:start;}
+@media(min-width:960px){ .studio-layout{grid-template-columns:380px 1fr;} }
+.studio-preview-col{position:relative;}
+@media(min-width:960px){ .studio-preview-col{position:sticky; top:88px;} }
+
+/* ============ FUTURISTE (Pronostics / Bulletin bg) ============ */
+.futuristic{
+  position:relative; border:1px solid rgba(56,189,248,.35);
+  background:
+    linear-gradient(180deg, rgba(56,189,248,.06), transparent 40%),
+    var(--panel);
+  box-shadow:0 0 0 1px rgba(56,189,248,.06) inset, 0 18px 45px rgba(0,0,0,.4);
+}
+.futuristic::before{
+  content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none; opacity:.5;
+  background-image:
+    linear-gradient(rgba(56,189,248,.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,189,248,.08) 1px, transparent 1px);
+  background-size:26px 26px; mask-image:linear-gradient(180deg, black, transparent 85%);
+}
+.futuristic h2{color:var(--accent);}
+.chip{
+  display:inline-flex; align-items:center; gap:6px; font-size:11px; font-weight:700;
+  padding:4px 10px; border-radius:20px; border:1px solid; letter-spacing:.03em;
+}
+.chip.risk-low{color:var(--green); border-color:rgba(55,214,122,.4); background:rgba(55,214,122,.1);}
+.chip.risk-mid{color:var(--amber); border-color:rgba(227,179,65,.4); background:rgba(227,179,65,.1);}
+.chip.risk-high{color:var(--red); border-color:rgba(240,73,91,.4); background:rgba(240,73,91,.1);}
+
+/* Confidence meter (form control) */
+.confidence-wrap{display:flex; align-items:center; gap:10px;}
+.confidence-wrap input[type=range]{flex:1; margin:0;}
+.confidence-readout{
+  font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:13px; color:var(--accent);
+  width:44px; text-align:right; flex-shrink:0;
+}
+
+/* Background-logo controls card */
+.bg-logo-preview-row{display:flex; align-items:center; gap:12px; margin-bottom:14px;}
+.bg-logo-preview-row img{
+  width:52px; height:52px; border-radius:10px; object-fit:contain; background:#00000055;
+  border:1px solid var(--line); padding:4px;
+}
+.bg-logo-preview-row .bg-logo-empty{
+  width:52px; height:52px; border-radius:10px; border:1px dashed var(--line); flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; color:var(--text-dim); font-size:18px;
+}
+
+/* Export panel */
+.export-panel{display:flex; flex-direction:column; gap:0;}
+.export-name-row{display:flex; gap:0; margin-bottom:14px;}
+.export-name-row input{border-top-right-radius:0; border-bottom-right-radius:0; margin-bottom:0; flex:1;}
+.export-name-row .ext-tag{
+  display:flex; align-items:center; padding:0 14px; background:var(--panel3); border:1px solid var(--line);
+  border-left:none; border-top-right-radius:10px; border-bottom-right-radius:10px; color:var(--text-dim);
+  font-size:12.5px; font-weight:700;
+}
+.format-seg{display:flex; background:var(--panel2); border-radius:10px; padding:3px; gap:3px; margin-bottom:14px;}
+.format-seg button{
+  flex:1; padding:10px 6px; border:none; background:transparent; color:var(--text-dim);
+  font-size:12px; font-weight:700; border-radius:8px; cursor:pointer; display:flex; flex-direction:column; gap:2px; align-items:center;
+}
+.format-seg button small{font-weight:500; font-size:9.5px; opacity:.75; text-transform:none; letter-spacing:0;}
+.format-seg button.active{background:var(--grad); color:#0B0D14;}
+
+/* Card variant for nested match rows */
+.match-card{background:var(--panel3); border:1px solid var(--line); border-radius:14px; padding:16px; margin-bottom:12px;}
+.match-card .match-card-head{display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;}
+.match-card .match-card-head b{font-size:11.5px; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <div class="brand-mark">🎬</div>
+    <div class="brand-txt"><b>Créateur Pro</b><span>Téléprompteur · Waveform · Bulletin</span></div>
+  </div>
+  <div class="tab-dropdown" id="tab-dropdown">
+    <button class="tab-dropdown-btn" id="tab-dropdown-btn" type="button">
+      <span id="tab-dropdown-current">📜 Téléprompteur</span>
+      <span class="chevron">▾</span>
+    </button>
+    <div class="tab-dropdown-menu" id="tab-dropdown-menu">
+      <button class="tab-btn active" data-tab="prompter">📜 Téléprompteur</button>
+      <button class="tab-btn" data-tab="waveform">🎵 Waveform</button>
+      <button class="tab-btn" data-tab="bulletin">🏆 Bulletin</button>
+      <button class="tab-btn" data-tab="pronostics">🔮 Pronostics</button>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ================= TAB 1 : TÉLÉPROMPTEUR ================= -->
+  <div id="prompter" class="tab-content active">
+    <div class="tab-head">
+      <div class="th-left">
+        <div class="th-icon">📜</div>
+        <div><h1>Téléprompteur</h1><p>Écris ton script, règle la vitesse et le style, puis filme-toi avec le texte superposé à l'image.</p></div>
+      </div>
+      <div class="th-badges"><span class="badge">100% local</span></div>
+    </div>
+    <div class="prompter-layout">
+
+      <div>
+        <div class="card">
+          <h2><span class="n">1</span>Script</h2>
+          <textarea id="p-text" rows="8" placeholder="Collez votre script ici...">Bonjour à tous et bienvenue dans cette nouvelle vidéo !
+
+Aujourd'hui, nous allons voir comment créer du contenu vidéo captivant avec un téléprompteur interactif.
+
+N'oubliez pas de vous abonner et de laisser un pouce bleu si l'astuce vous plaît !</textarea>
+          <div class="hint-box"><span>💾</span><span>Ton script est sauvegardé automatiquement sur cet appareil — tu le retrouveras à ta prochaine visite.</span></div>
+        </div>
+
+        <div class="card">
+          <h2><span class="n">2</span>Réglages de lecture</h2>
+          <div class="field">
+            <label>Vitesse de défilement <span class="val" id="val-speed">3</span></label>
+            <input type="range" id="p-speed" min="1" max="10" value="3">
+          </div>
+          <div class="field">
+            <label>Taille du texte <span class="val" id="val-size">40px</span></label>
+            <input type="range" id="p-size" min="20" max="90" value="40">
+          </div>
+          <div class="field">
+            <label>Interligne <span class="val" id="val-lh">1.6</span></label>
+            <input type="range" id="p-lh" min="10" max="25" value="16">
+          </div>
+          <div class="row">
+            <div class="field">
+              <label>Police</label>
+              <select id="p-font">
+                <option value="'Inter',sans-serif">Sans-serif</option>
+                <option value="'Space Grotesk',sans-serif">Moderne</option>
+                <option value="Georgia,serif">Serif</option>
+                <option value="'Courier New',monospace">Machine à écrire</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Alignement</label>
+              <select id="p-align">
+                <option value="center">Centré</option>
+                <option value="left">Gauche</option>
+              </select>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Couleur texte</label><input type="color" id="p-color" value="#ffffff"></div>
+            <div class="field"><label>Couleur fond</label><input type="color" id="p-bg" value="#000000"></div>
+          </div>
+          <div class="toggle-row">
+            <div><div class="t-label">Mode miroir</div><div class="t-hint">Pour un vrai miroir sans tain (télé-souffleur)</div></div>
+            <label class="switch"><input type="checkbox" id="p-mirror"><span class="slider-el"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div><div class="t-label">Compte à rebours 3-2-1</div><div class="t-hint">Avant le démarrage du défilement</div></div>
+            <label class="switch"><input type="checkbox" id="p-countdown" checked><span class="slider-el"></span></label>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="n">3</span>Caméra &amp; micro</h2>
+          <p class="sub">Filme-toi avec le texte du prompteur superposé à l'image (ou enregistre juste ta voix), puis télécharge ou envoie l'audio dans Waveform.</p>
+
+          <div id="insecure-context-warning" class="support-warning">⚠️ Pour que ton téléphone te propose d'autoriser la caméra et le micro, cette page doit être ouverte via une adresse <b>https://</b> (par exemple hébergée sur GitHub Pages) — pas en fichier local ouvert directement. Les navigateurs mobiles bloquent silencieusement la caméra/micro sur un fichier local.</div>
+          <div id="cam-support-warning" class="support-warning">⚠️ Ton navigateur ne permet pas d'accéder à la caméra/micro ou d'enregistrer une vidéo ici (essaie Chrome ou Firefox à jour).</div>
+
+          <div class="field">
+            <label>Mode d'enregistrement</label>
+            <div class="seg" id="seg-cam-mode">
+              <button data-v="video" class="active">🎥 Vidéo + voix</button>
+              <button data-v="audio">🎙️ Voix seule</button>
+            </div>
+          </div>
+
+          <div class="row">
+            <button class="btn ghost block" id="btn-cam-toggle">🔓 Autoriser caméra + micro</button>
+          </div>
+          <div id="cam-status" class="badge" style="margin-top:10px;"><span class="dot"></span><span>Autorisation non demandée</span></div>
+
+          <div class="row" style="margin-top:12px;">
+            <button class="btn danger block" id="btn-cam-record" disabled>⏺ Enregistrer</button>
+          </div>
+
+          <video id="cam-recorded-preview" class="export-preview" controls></video>
+          <audio id="cam-recorded-audio-preview" style="width:100%; margin-top:10px; display:none;" controls></audio>
+          <div class="row" style="margin-top:10px;">
+            <a id="cam-download-link" class="btn success" style="display:none; text-decoration:none;" download="enregistrement.webm">⬇️ Télécharger</a>
+            <button id="cam-to-waveform-btn" class="btn ghost" style="display:none;">🎵 Utiliser dans Waveform</button>
+          </div>
+        </div>
+      </div>
+
+
+      <div>
+        <div class="prompter-view" id="prompter-view">
+          <video id="prompter-video-bg" autoplay muted playsinline></video>
+          <div class="prompter-hud">
+            <span class="badge" id="prompter-time-badge"><span class="dot"></span><span>00:00 / 00:00</span></span>
+            <button class="btn ghost sm" id="btn-fullscreen">⛶ Plein écran</button>
+          </div>
+          <div class="prompter-overlay-line"></div>
+          <div class="prompter-scroll">
+            <div class="prompter-content" id="prompter-box"></div>
+          </div>
+          <div class="countdown-overlay" id="countdown-overlay">3</div>
+          <div class="prompter-progress-wrap"><div class="prompter-progress-bar" id="prompter-progress"></div></div>
+        </div>
+        <div class="prompter-controls-bar">
+          <button class="btn success" id="btn-p-start">▶ Démarrer</button>
+          <button class="btn ghost" id="btn-p-reset">🔄 Réinitialiser</button>
+        </div>
+        <div class="hint-box" style="margin-top:12px;"><span>⌨️</span><span>Astuce : la barre <b>Espace</b> démarre ou met en pause le défilement à tout moment.</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= TAB 2 : WAVEFORM ================= -->
+  <div id="waveform" class="tab-content">
+    <div class="tab-head">
+      <div class="th-left">
+        <div class="th-icon">🎵</div>
+        <div><h1>Waveform Vidéo</h1><p>Transforme un fichier audio en vidéo animée avec onde sonore, image de fond et titres — prête pour les réseaux.</p></div>
+      </div>
+      <div class="th-badges"><span class="badge">100% local</span></div>
+    </div>
+    <div id="wave-support-warning" class="support-warning">⚠️ Ton navigateur ne supporte pas l'enregistrement vidéo (MediaRecorder). L'aperçu fonctionnera mais l'export sera indisponible — essaie Chrome ou Firefox à jour.</div>
+    <div class="wave-layout">
+
+      <div>
+        <div class="card">
+          <h2><span class="n">1</span>Fichiers sources</h2>
+          <label>Fichier audio (MP3 / WAV)</label>
+          <input type="file" id="audio-file" accept="audio/*">
+          <div class="badge" id="audio-status" style="margin-bottom:14px;"><span class="dot"></span><span>Aucun audio chargé</span></div>
+
+          <label>Image d'arrière-plan (optionnel)</label>
+          <input type="file" id="bg-file" accept="image/*">
+          <div class="row" style="margin-top:8px;">
+            <button class="btn ghost sm" id="btn-remove-bg">🗑️ Retirer l'image</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="n">2</span>Style visuel</h2>
+          <div class="field">
+            <label>Format</label>
+            <div class="seg" id="seg-format">
+              <button data-v="1:1" class="active">Carré</button>
+              <button data-v="9:16">Story</button>
+              <button data-v="16:9">Large</button>
+            </div>
+          </div>
+          <div class="field">
+            <label>Style de l'onde</label>
+            <div class="seg" id="seg-wavestyle">
+              <button data-v="bars" class="active">Barres</button>
+              <button data-v="line">Ligne</button>
+              <button data-v="circle">Cercle</button>
+            </div>
+          </div>
+          <div class="row">
+            <div class="field"><label>Couleur de l'onde</label><input type="color" id="wave-color" value="#38bdf8"></div>
+            <div class="field"><label>Fond (sans image)</label><input type="color" id="wave-bgcolor" value="#0f172a"></div>
+          </div>
+          <div class="field">
+            <label>Titre (optionnel)</label>
+            <input type="text" id="wave-title" placeholder="Ex : Nom du morceau">
+          </div>
+          <div class="field">
+            <label>Sous-titre (optionnel)</label>
+            <input type="text" id="wave-subtitle" placeholder="Ex : Nom de l'artiste">
+          </div>
+        </div>
+      </div>
+
+      <div class="wave-preview">
+        <div class="canvas-wrap"><canvas id="wave-canvas" width="1080" height="1080"></canvas></div>
+
+        <div class="playbar">
+          <div class="playbar-controls">
+            <button class="btn" id="btn-play-audio">▶</button>
+            <div class="vol-wrap">
+              <span style="font-size:13px;">🔊</span>
+              <input type="range" id="vol-slider" min="0" max="100" value="80">
+            </div>
+            <button class="btn ghost sm" id="btn-stop-audio">⏹</button>
+          </div>
+          <div class="seekbar" id="seekbar"><div class="fill" id="seekbar-fill"></div></div>
+          <div class="time-row"><span id="time-current">00:00</span><span id="time-total">00:00</span></div>
+        </div>
+
+        <div class="card" style="width:100%; max-width:480px;">
+          <h2 style="margin-bottom:10px;"><span class="n">3</span>Export vidéo</h2>
+          <div class="row">
+            <button class="btn success block" id="btn-export">🎥 Exporter la vidéo</button>
+            <button class="btn danger" id="btn-cancel-export" style="display:none;">✕ Annuler</button>
+          </div>
+          <div class="export-progress-wrap" id="export-progress-wrap"><div class="export-progress-bar" id="export-progress-bar"></div></div>
+          <p id="export-status" style="margin-top:10px; font-size:12.5px; color:var(--text-dim);"></p>
+          <video class="export-preview" id="export-video-preview" controls></video>
+          <a id="export-download-link" class="btn success block" style="display:none; margin-top:10px; text-decoration:none;" download="waveform-video.webm">⬇️ Télécharger la vidéo</a>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= TAB 3 : BULLETIN DE RÉSULTATS ================= -->
+  <div id="bulletin" class="tab-content">
+    <div class="tab-head">
+      <div class="th-left">
+        <div class="th-icon">🏆</div>
+        <div><h1>Bulletin de résultats</h1><p>Compose une image de résultats de matchs avec logos automatiques (Wikipédia), aux couleurs de ta marque.</p></div>
+      </div>
+      <div class="th-badges"><span class="badge">100% local</span><span class="badge">Logos auto</span></div>
+    </div>
+    <div class="studio-layout">
+
+      <div>
+        <div class="card">
+          <h2><span class="n">1</span>Marque</h2>
+          <p class="sub">Enregistré automatiquement sur cet appareil — à configurer une seule fois.</p>
+          <div class="field">
+            <label>Nom de la marque</label>
+            <input type="text" id="bl-brand-name" value="PARADOX RATIO">
+          </div>
+          <div class="field">
+            <label>Logo (PNG transparent recommandé)</label>
+            <input type="file" id="bl-brand-logo" accept="image/*">
+          </div>
+          <div class="bg-logo-preview-row">
+            <img id="bl-brand-logo-preview" style="display:none;" alt="logo">
+            <div class="bg-logo-empty" id="bl-brand-logo-empty">🖼️</div>
+            <button class="btn ghost sm" id="bl-brand-logo-clear">🗑️ Retirer</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="n">2</span>Style</h2>
+          <div class="row">
+            <div class="field"><label>Couleur accent (icônes, titre)</label><input type="color" id="bl-accent" value="#3ac460"></div>
+            <div class="field"><label>Couleur fond (dégradé sombre)</label><input type="color" id="bl-bgcolor" value="#0a1c12"></div>
+          </div>
+          <div class="toggle-row">
+            <div><div class="t-label">Afficher le badge "TF" (temps final)</div></div>
+            <label class="switch"><input type="checkbox" id="bl-show-tf" checked><span class="slider-el"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div><div class="t-label">Pied de page (tagline marque)</div></div>
+            <label class="switch"><input type="checkbox" id="bl-show-footer" checked><span class="slider-el"></span></label>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="n">3</span>Arrière-plan logo</h2>
+          <p class="sub">Affiche ton logo de marque en filigrane géant derrière le bulletin, avec contrôle du flou et de la luminosité.</p>
+          <div class="toggle-row">
+            <div><div class="t-label">Afficher le logo en arrière-plan</div><div class="t-hint">Utilise le logo de la carte "Marque" ci-dessus</div></div>
+            <label class="switch"><input type="checkbox" id="bl-bglogo-enable"><span class="slider-el"></span></label>
+          </div>
+          <div class="field">
+            <label>Flou <span class="val" id="val-bl-blur">6px</span></label>
+            <input type="range" id="bl-bglogo-blur" min="0" max="30" value="6">
+          </div>
+          <div class="field">
+            <label>Luminosité / opacité <span class="val" id="val-bl-opac">18%</span></label>
+            <input type="range" id="bl-bglogo-opacity" min="0" max="60" value="18">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Taille <span class="val" id="val-bl-scale">85%</span></label>
+            <input type="range" id="bl-bglogo-scale" min="30" max="150" value="85">
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="n">4</span>Compétition &amp; matchs</h2>
+          <div class="field">
+            <label>Compétition (optionnel)</label>
+            <input type="text" id="bl-competition" placeholder="Ex : Ligue Europa Conférence">
+          </div>
+          <div id="bl-rows"></div>
+          <button class="btn ghost block" id="bl-add-row" style="margin-top:8px;">➕ Ajouter un match</button>
+        </div>
+
+        <button class="btn success block" id="bl-generate">🖼️ Générer le bulletin</button>
+        <p id="bl-status" class="hint-box" style="margin-top:10px; display:none;"></p>
+      </div>
+
+      <div class="wave-preview studio-preview-col">
+        <div class="canvas-wrap"><canvas id="bl-canvas" width="1080" height="600"></canvas></div>
+
+        <div class="card export-panel" style="width:100%; max-width:480px;">
+          <h2><span class="n">↓</span>Export de l'image</h2>
+          <label>Nom du fichier</label>
+          <div class="export-name-row">
+            <input type="text" id="bl-export-name" placeholder="bulletin-du-jour" value="bulletin">
+            <span class="ext-tag" id="bl-export-ext">.jpg</span>
+          </div>
+          <label>Format</label>
+          <div class="format-seg" id="bl-format-seg">
+            <button data-v="jpeg" class="active">JPG<small>léger</small></button>
+            <button data-v="png">PNG<small>transparence</small></button>
+            <button data-v="webp">WEBP<small>optimisé</small></button>
+          </div>
+          <a id="bl-download" class="btn success block" style="display:none; text-decoration:none;" download="bulletin.jpg">⬇️ Télécharger l'image</a>
+        </div>
+
+        <div class="hint-box"><span>ℹ️</span><span>Les logos d'équipes sont récupérés automatiquement via <b>Wikipédia</b> (gratuit, sans clé). Si une équipe n'est pas trouvée, ses initiales sont utilisées à la place — tu peux aussi importer un logo manuellement pour chaque ligne.</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= TAB 4 : PRONOSTICS ================= -->
+  <div id="pronostics" class="tab-content">
+    <div class="tab-head">
+      <div class="th-left">
+        <div class="th-icon">🔮</div>
+        <div><h1>Pronostics Expert</h1><p>Génère une image de pronostics façon "expert" : cotes, niveau de confiance, risque et analyse, sur un fond futuriste.</p></div>
+      </div>
+      <div class="th-badges"><span class="badge">100% local</span><span class="badge ok">Mode Expert</span></div>
+    </div>
+    <div class="studio-layout">
+
+      <div>
+        <div class="card">
+          <h2><span class="n">1</span>Marque</h2>
+          <p class="sub">Enregistré automatiquement sur cet appareil — à configurer une seule fois.</p>
+          <div class="field">
+            <label>Nom de la marque</label>
+            <input type="text" id="pr-brand-name" value="PARADOX RATIO">
+          </div>
+          <div class="field">
+            <label>Slogan expert (optionnel)</label>
+            <input type="text" id="pr-brand-tagline" placeholder="Ex : Analyse & pronostics du jour" value="ANALYSE • PRONOSTICS • EXPERT">
+          </div>
+          <div class="field">
+            <label>Logo (PNG transparent recommandé)</label>
+            <input type="file" id="pr-brand-logo" accept="image/*">
+          </div>
+          <div class="bg-logo-preview-row">
+            <img id="pr-brand-logo-preview" style="display:none;" alt="logo">
+            <div class="bg-logo-empty" id="pr-brand-logo-empty">🖼️</div>
+            <button class="btn ghost sm" id="pr-brand-logo-clear">🗑️ Retirer</button>
+          </div>
+        </div>
+
+        <div class="card futuristic">
+          <h2><span class="n">2</span>Style futuriste</h2>
+          <div class="row">
+            <div class="field"><label>Couleur accent néon</label><input type="color" id="pr-accent" value="#38bdf8"></div>
+            <div class="field"><label>Couleur accent secondaire</label><input type="color" id="pr-accent2" value="#8b6bd9"></div>
+          </div>
+          <div class="field">
+            <label>Couleur fond</label>
+            <input type="color" id="pr-bgcolor" value="#070912">
+          </div>
+          <div class="toggle-row">
+            <div><div class="t-label">Grille néon</div><div class="t-hint">Trame futuriste en arrière-plan</div></div>
+            <label class="switch"><input type="checkbox" id="pr-show-grid" checked><span class="slider-el"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div><div class="t-label">Effet glow sur les cartes</div></div>
+            <label class="switch"><input type="checkbox" id="pr-show-glow" checked><span class="slider-el"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div><div class="t-label">Badge "EXPERT" animé (statique à l'export)</div></div>
+            <label class="switch"><input type="checkbox" id="pr-show-badge" checked><span class="slider-el"></span></label>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="n">3</span>Arrière-plan logo</h2>
+          <p class="sub">Affiche ton logo de marque en filigrane géant derrière les pronostics, avec contrôle du flou et de la luminosité.</p>
+          <div class="toggle-row">
+            <div><div class="t-label">Afficher le logo en arrière-plan</div><div class="t-hint">Utilise le logo de la carte "Marque" ci-dessus</div></div>
+            <label class="switch"><input type="checkbox" id="pr-bglogo-enable" checked><span class="slider-el"></span></label>
+          </div>
+          <div class="field">
+            <label>Flou <span class="val" id="val-pr-blur">10px</span></label>
+            <input type="range" id="pr-bglogo-blur" min="0" max="30" value="10">
+          </div>
+          <div class="field">
+            <label>Luminosité / opacité <span class="val" id="val-pr-opac">14%</span></label>
+            <input type="range" id="pr-bglogo-opacity" min="0" max="60" value="14">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Taille <span class="val" id="val-pr-scale">100%</span></label>
+            <input type="range" id="pr-bglogo-scale" min="30" max="160" value="100">
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="n">4</span>Options d'affichage</h2>
+          <div class="toggle-row">
+            <div><div class="t-label">Afficher les cotes</div></div>
+            <label class="switch"><input type="checkbox" id="pr-show-odds" checked><span class="slider-el"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div><div class="t-label">Afficher la jauge de confiance</div></div>
+            <label class="switch"><input type="checkbox" id="pr-show-conf" checked><span class="slider-el"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div><div class="t-label">Afficher le niveau de risque</div></div>
+            <label class="switch"><input type="checkbox" id="pr-show-risk" checked><span class="slider-el"></span></label>
+          </div>
+          <div class="toggle-row">
+            <div><div class="t-label">Pied de page (tagline marque)</div></div>
+            <label class="switch"><input type="checkbox" id="pr-show-footer" checked><span class="slider-el"></span></label>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2><span class="n">5</span>Pronostics</h2>
+          <p class="sub">Chaque match a sa propre compétition et sa date/heure. Les matchs sont automatiquement regroupés par compétition à l'image finale — tu peux donc mélanger plusieurs compétitions différentes, tout reste bien organisé.</p>
+          <div class="field">
+            <label>Compétition par défaut (optionnel)</label>
+            <input type="text" id="pr-competition" placeholder="Ex : Ligue des Champions — J4">
+            <div class="t-hint" style="margin-top:6px;">Pré-remplit les nouveaux matchs ; utilisée si un match ne précise pas la sienne.</div>
+          </div>
+          <div class="field">
+            <label>Type de pari (global, optionnel)</label>
+            <input type="text" id="pr-bettype" placeholder="Ex : Combiné 3 sélections">
+          </div>
+          <div id="pr-rows"></div>
+          <button class="btn ghost block" id="pr-add-row" style="margin-top:8px;">➕ Ajouter un pronostic</button>
+        </div>
+
+        <button class="btn success block" id="pr-generate">🔮 Générer les pronostics</button>
+        <p id="pr-status" class="hint-box" style="margin-top:10px; display:none;"></p>
+      </div>
+
+      <div class="wave-preview studio-preview-col">
+        <div class="canvas-wrap"><canvas id="pr-canvas" width="1080" height="600"></canvas></div>
+
+        <div class="card export-panel" style="width:100%; max-width:480px;">
+          <h2><span class="n">↓</span>Export de l'image</h2>
+          <label>Nom du fichier</label>
+          <div class="export-name-row">
+            <input type="text" id="pr-export-name" placeholder="pronostics-du-jour" value="pronostics">
+            <span class="ext-tag" id="pr-export-ext">.jpg</span>
+          </div>
+          <label>Format</label>
+          <div class="format-seg" id="pr-format-seg">
+            <button data-v="jpeg" class="active">JPG<small>léger</small></button>
+            <button data-v="png">PNG<small>transparence</small></button>
+            <button data-v="webp">WEBP<small>optimisé</small></button>
+          </div>
+          <a id="pr-download" class="btn success block" style="display:none; text-decoration:none;" download="pronostics.jpg">⬇️ Télécharger l'image</a>
+        </div>
+
+        <div class="hint-box"><span>ℹ️</span><span>Les logos d'équipes sont récupérés automatiquement via <b>Wikipédia</b>. Si une équipe n'est pas trouvée, ses initiales sont utilisées à la place — tu peux aussi importer un logo manuellement pour chaque ligne.</span></div>
+      </div>
+
+    </div>
+  </div>
+
+</main>
+
+<div id="export-block-overlay" style="display:none; position:fixed; inset:0; z-index:999; background:rgba(5,6,10,.96); backdrop-filter:blur(6px); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px;">
+  <div style="font-size:44px; margin-bottom:14px;">🎬</div>
+  <h2 style="font-size:18px; margin-bottom:10px;">Export en cours — reste sur cette page</h2>
+  <p style="color:var(--text-dim); font-size:13.5px; max-width:340px; line-height:1.6; margin-bottom:18px;">Ne change pas d'application (WhatsApp, etc.) et n'éteins pas l'écran tant que ce n'est pas terminé — sinon ton téléphone met l'export en pause.</p>
+  <div id="export-block-countdown" style="font-family:'Space Grotesk',sans-serif; font-size:34px; color:var(--accent); margin-bottom:18px;">--:--</div>
+  <button class="btn danger sm" id="export-block-cancel">✕ Annuler l'export</button>
+</div>
+
+<footer>Traitement 100% local dans ton navigateur — aucun fichier n'est envoyé sur un serveur (les logos sont récupérés directement depuis Wikipédia par ton appareil).</footer>
+
+<script>
+'use strict';
+
+/* ==========================================================================
+   UTILITAIRES COMMUNS
+   ========================================================================== */
+function fmtTime(sec){
+  if(!isFinite(sec) || sec < 0) sec = 0;
+  const m = Math.floor(sec/60), s = Math.floor(sec%60);
+  return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function pickSupportedMime(){
+  const candidates = [
+    'video/webm;codecs=vp9,opus',
+    'video/webm;codecs=vp8,opus',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm',
+  ];
+  for(const c of candidates){
+    if(window.MediaRecorder && MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(c)) return c;
+  }
+  return window.MediaRecorder ? '' : null; // null = MediaRecorder indisponible
+}
+const MEDIARECORDER_SUPPORTED = !!window.MediaRecorder;
+const AUDIOCONTEXT_SUPPORTED = !!(window.AudioContext || window.webkitAudioContext);
+
+/* ==========================================================================
+   NAVIGATION ENTRE ONGLETS
+   ========================================================================== */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(el=>el.classList.remove('active'));
+    document.getElementById(btn.dataset.tab).classList.add('active');
+    btn.classList.add('active');
+    document.getElementById('tab-dropdown-current').textContent = btn.textContent;
+    document.getElementById('tab-dropdown').classList.remove('open');
+  });
+});
+(function(){
+  const dd = document.getElementById('tab-dropdown');
+  const ddBtn = document.getElementById('tab-dropdown-btn');
+  ddBtn.addEventListener('click', e=>{
+    e.stopPropagation();
+    dd.classList.toggle('open');
+  });
+  document.addEventListener('click', e=>{
+    if(!dd.contains(e.target)) dd.classList.remove('open');
+  });
+  document.addEventListener('keydown', e=>{
+    if(e.key === 'Escape') dd.classList.remove('open');
+  });
+})();
+
+/* ==========================================================================
+   1. TÉLÉPROMPTEUR
+   ========================================================================== */
+(function(){
+  const els = {
+    text: document.getElementById('p-text'),
+    speed: document.getElementById('p-speed'),
+    size: document.getElementById('p-size'),
+    lh: document.getElementById('p-lh'),
+    font: document.getElementById('p-font'),
+    align: document.getElementById('p-align'),
+    color: document.getElementById('p-color'),
+    bg: document.getElementById('p-bg'),
+    mirror: document.getElementById('p-mirror'),
+    countdown: document.getElementById('p-countdown'),
+    box: document.getElementById('prompter-box'),
+    view: document.getElementById('prompter-view'),
+    scrollWrap: document.querySelector('.prompter-scroll'),
+    startBtn: document.getElementById('btn-p-start'),
+    resetBtn: document.getElementById('btn-p-reset'),
+    fullscreenBtn: document.getElementById('btn-fullscreen'),
+    progress: document.getElementById('prompter-progress'),
+    timeBadge: document.getElementById('prompter-time-badge'),
+    countdownOverlay: document.getElementById('countdown-overlay'),
+    videoBg: document.getElementById('prompter-video-bg'),
+  };
+
+  let rafId = null;
+  let running = false;
+  let scrollPos = 0;
+  let lastTs = null;
+  let maxScroll = 1;
+  const STORAGE_KEY = 'teleprompter_script_v1';
+
+  // ---- Persistance locale du script ----
+  try{
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if(saved !== null) els.text.value = saved;
+  }catch(e){ /* stockage indisponible (mode privé) : on continue sans sauvegarde */ }
+
+  function persist(){
+    try{ localStorage.setItem(STORAGE_KEY, els.text.value); }catch(e){}
+  }
+
+  function applyStyle(){
+    els.box.textContent = els.text.value;
+    els.box.style.fontSize = els.size.value + 'px';
+    els.box.style.lineHeight = (els.lh.value/10);
+    els.box.style.fontFamily = els.font.value;
+    els.box.style.color = els.color.value;
+    els.view.style.background = els.bg.value;
+    els.box.classList.toggle('align-left', els.align.value === 'left');
+    document.getElementById('val-speed').textContent = els.speed.value;
+    document.getElementById('val-size').textContent = els.size.value + 'px';
+    document.getElementById('val-lh').textContent = (els.lh.value/10).toFixed(1);
+    // recalcul de la hauteur défilable après tout changement de style
+    requestAnimationFrame(computeMaxScroll);
+  }
+
+  function applyMirror(){
+    els.box.classList.toggle('mirror', els.mirror.checked);
+  }
+
+  function computeMaxScroll(){
+    const contentH = els.box.scrollHeight;
+    const viewH = els.scrollWrap.clientHeight;
+    maxScroll = Math.max(1, contentH - viewH/2);
+  }
+
+  function updateProgress(){
+    const pct = Math.min(100, (scrollPos / maxScroll) * 100);
+    els.progress.style.width = pct + '%';
+    const speedVal = parseInt(els.speed.value, 10);
+    const remainingPx = Math.max(0, maxScroll - scrollPos);
+    const pxPerSec = speedVal * 0.8 * (1000/16); // approx à 60fps
+    const remainingSec = pxPerSec > 0 ? remainingPx / pxPerSec : 0;
+    els.timeBadge.querySelector('span:last-child').textContent =
+      `${fmtTime(scrollPos/ (pxPerSec||1))} / ${fmtTime(remainingSec + scrollPos/(pxPerSec||1))}`;
+  }
+
+  function step(ts){
+    if(!running) return;
+    if(lastTs === null) lastTs = ts;
+    const dt = ts - lastTs;
+    lastTs = ts;
+    const speed = parseInt(els.speed.value, 10);
+    scrollPos += speed * 0.8 * (dt/16.6);
+    if(scrollPos >= maxScroll){
+      scrollPos = maxScroll;
+      stopPrompter();
+    }
+    render();
+    updateProgress();
+    if(running) rafId = requestAnimationFrame(step);
+  }
+
+  function render(){
+    const mirrorFlag = els.mirror.checked;
+    els.box.style.transform = mirrorFlag
+      ? `translateY(-${scrollPos}px) scaleX(-1)`
+      : `translateY(-${scrollPos}px)`;
+  }
+
+  function startPrompter(){
+    running = true;
+    lastTs = null;
+    els.startBtn.textContent = '⏸ Pause';
+    els.startBtn.className = 'btn danger';
+    rafId = requestAnimationFrame(step);
+  }
+
+  function stopPrompter(){
+    running = false;
+    if(rafId) cancelAnimationFrame(rafId);
+    els.startBtn.textContent = '▶ Démarrer';
+    els.startBtn.className = 'btn success';
+  }
+
+  function runCountdown(cb){
+    if(!els.countdown.checked) return cb();
+    let n = 3;
+    els.countdownOverlay.style.display = 'flex';
+    els.countdownOverlay.textContent = n;
+    const iv = setInterval(()=>{
+      n -= 1;
+      if(n <= 0){
+        clearInterval(iv);
+        els.countdownOverlay.style.display = 'none';
+        cb();
+      } else {
+        els.countdownOverlay.textContent = n;
+      }
+    }, 700);
+  }
+
+  els.startBtn.addEventListener('click', ()=>{
+    if(running){
+      stopPrompter();
+    } else {
+      computeMaxScroll();
+      runCountdown(startPrompter);
+    }
+  });
+
+  els.resetBtn.addEventListener('click', ()=>{
+    stopPrompter();
+    scrollPos = 0;
+    render();
+    updateProgress();
+  });
+
+  ['input'].forEach(ev=>{
+    els.text.addEventListener(ev, ()=>{ applyStyle(); persist(); });
+  });
+  [els.speed, els.size, els.lh, els.font, els.align, els.color, els.bg].forEach(el=>{
+    el.addEventListener('input', applyStyle);
+  });
+  els.mirror.addEventListener('change', applyMirror);
+
+  // Raccourci clavier : espace = play/pause (sauf si on écrit dans le textarea)
+  document.addEventListener('keydown', e=>{
+    if(e.code === 'Space' && document.activeElement !== els.text){
+      e.preventDefault();
+      els.startBtn.click();
+    }
+  });
+
+  // Plein écran
+  els.fullscreenBtn.addEventListener('click', ()=>{
+    if(!document.fullscreenElement){
+      els.view.requestFullscreen?.().catch(()=>{});
+      els.view.classList.add('fullscreen-active');
+    } else {
+      document.exitFullscreen?.();
+    }
+  });
+  document.addEventListener('fullscreenchange', ()=>{
+    if(!document.fullscreenElement) els.view.classList.remove('fullscreen-active');
+    requestAnimationFrame(computeMaxScroll);
+  });
+
+  window.addEventListener('resize', ()=> requestAnimationFrame(computeMaxScroll));
+
+  applyStyle();
+  applyMirror();
+  setTimeout(computeMaxScroll, 200);
+
+  /* ---------------- Caméra + micro (texte superposé) ---------------- */
+  const camToggleBtn = document.getElementById('btn-cam-toggle');
+  const camRecordBtn = document.getElementById('btn-cam-record');
+  const camStatus = document.getElementById('cam-status');
+  const camPreview = document.getElementById('cam-recorded-preview');
+  const camAudioPreview = document.getElementById('cam-recorded-audio-preview');
+  const camDownload = document.getElementById('cam-download-link');
+  const camToWaveformBtn = document.getElementById('cam-to-waveform-btn');
+  const camWarning = document.getElementById('cam-support-warning');
+  const insecureWarning = document.getElementById('insecure-context-warning');
+
+  const IS_SECURE_CONTEXT = window.isSecureContext !== false &&
+    (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1');
+  if(!IS_SECURE_CONTEXT) insecureWarning.style.display = 'block';
+
+  const CAM_SUPPORTED = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia) && MEDIARECORDER_SUPPORTED;
+  if(!CAM_SUPPORTED){
+    camWarning.style.display = 'block';
+    camToggleBtn.disabled = true;
+  }
+
+  let camMode = 'video'; // 'video' | 'audio'
+  let camStream = null;
+  let camRecording = false;
+  let camRecorder = null;
+  let camChunks = [];
+  let camCanvas = null, camCtx = null, camDrawLoop = null;
+  let lastRecordingBlob = null, lastRecordingIsAudioOnly = false;
+
+  document.getElementById('seg-cam-mode').querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      document.getElementById('seg-cam-mode').querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      camMode = b.dataset.v;
+      // un changement de mode demande une nouvelle autorisation adaptée
+      if(camStream){ camStream.getTracks().forEach(t=>t.stop()); camStream = null; }
+      els.videoBg.style.display = 'none';
+      camRecordBtn.disabled = true;
+      camToggleBtn.textContent = '🔓 Autoriser caméra + micro';
+      setCamStatus('Autorisation non demandée');
+    });
+  });
+
+  function setCamStatus(text, kind){
+    camStatus.className = 'badge' + (kind ? ' ' + kind : '');
+    camStatus.querySelector('span:last-child').textContent = text;
+  }
+
+  function explainGetUserMediaError(err){
+    if(err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError')
+      return "Autorisation refusée — vérifie les réglages du site dans ton navigateur (icône 🔒 dans la barre d'adresse) puis réessaie.";
+    if(err.name === 'NotFoundError' || err.name === 'DevicesNotFoundError')
+      return "Aucune caméra/micro détecté sur cet appareil.";
+    if(err.name === 'NotReadableError')
+      return "La caméra ou le micro est déjà utilisé par une autre application.";
+    if(!IS_SECURE_CONTEXT)
+      return "Ouvre cette page en https:// pour pouvoir autoriser la caméra/micro sur mobile.";
+    return "Impossible d'accéder à la caméra/micro (" + (err.message || err.name || 'erreur inconnue') + ").";
+  }
+
+  camToggleBtn.addEventListener('click', async ()=>{
+    if(camStream){
+      camStream.getTracks().forEach(t=>t.stop());
+      camStream = null;
+      els.videoBg.style.display = 'none';
+      camToggleBtn.textContent = '🔓 Autoriser caméra + micro';
+      camRecordBtn.disabled = true;
+      setCamStatus('Autorisation retirée');
+      return;
+    }
+    setCamStatus('⏳ Demande d\u2019autorisation en cours…', 'warn');
+    try{
+      const constraints = camMode === 'audio'
+        ? { audio:true }
+        : { video:{facingMode:'user'}, audio:true };
+      camStream = await navigator.mediaDevices.getUserMedia(constraints);
+      if(camMode === 'video'){
+        els.videoBg.srcObject = camStream;
+        els.videoBg.style.display = 'block';
+      }
+      camToggleBtn.textContent = '🛑 Retirer l\u2019autorisation';
+      camRecordBtn.disabled = false;
+      setCamStatus(camMode === 'audio' ? 'Micro autorisé' : 'Caméra + micro autorisés', 'ok');
+    }catch(err){
+      setCamStatus(explainGetUserMediaError(err), 'err');
+    }
+  });
+
+  function drawCamFrame(){
+    if(!camCtx || !camStream) return;
+    const vw = els.videoBg.videoWidth || 1280, vh = els.videoBg.videoHeight || 720;
+    camCanvas.width = vw; camCanvas.height = vh;
+    camCtx.save();
+    camCtx.translate(vw, 0); camCtx.scale(-1,1); // effet miroir naturel façon webcam
+    camCtx.drawImage(els.videoBg, 0, 0, vw, vh);
+    camCtx.restore();
+
+    // Bandeau de texte du prompteur incrusté en bas de l'image (lisible sur la vidéo finale)
+    const lines = els.text.value.split('\n').filter(l=>l.trim());
+    const currentLineIdx = Math.min(lines.length-1, Math.floor((scrollPos / Math.max(1,maxScroll)) * lines.length));
+    const lineText = lines[currentLineIdx] || '';
+    const bandH = Math.round(vh * 0.14);
+    camCtx.fillStyle = 'rgba(0,0,0,0.55)';
+    camCtx.fillRect(0, vh-bandH, vw, bandH);
+    camCtx.fillStyle = '#ffffff';
+    camCtx.font = `700 ${Math.round(vh*0.045)}px 'Inter', sans-serif`;
+    camCtx.textAlign = 'center';
+    camCtx.textBaseline = 'middle';
+    wrapCanvasText(camCtx, lineText, vw/2, vh - bandH/2, vw*0.9, Math.round(vh*0.05));
+
+    camDrawLoop = requestAnimationFrame(drawCamFrame);
+  }
+
+  function wrapCanvasText(ctx, text, x, y, maxWidth, lineHeight){
+    const words = text.split(' ');
+    let line = '', lineY = y;
+    const outLines = [];
+    for(const w of words){
+      const test = line ? line + ' ' + w : w;
+      if(ctx.measureText(test).width > maxWidth && line){
+        outLines.push(line); line = w;
+      } else line = test;
+    }
+    if(line) outLines.push(line);
+    const startY = y - ((outLines.length-1) * lineHeight)/2;
+    outLines.forEach((l,i)=> ctx.fillText(l, x, startY + i*lineHeight));
+  }
+
+  function finishRecording(blob, isAudioOnly){
+    lastRecordingBlob = blob;
+    lastRecordingIsAudioOnly = isAudioOnly;
+    const url = URL.createObjectURL(blob);
+    if(isAudioOnly){
+      camAudioPreview.src = url;
+      camAudioPreview.style.display = 'block';
+      camPreview.style.display = 'none';
+      camDownload.download = `voix-off-${Date.now()}.webm`;
+    } else {
+      camPreview.src = url;
+      camPreview.style.display = 'block';
+      camAudioPreview.style.display = 'none';
+      camDownload.download = `teleprompteur-video-${Date.now()}.webm`;
+    }
+    camDownload.href = url;
+    camDownload.style.display = 'inline-flex';
+    camToWaveformBtn.style.display = 'inline-flex';
+    camRecording = false;
+    camRecordBtn.textContent = '⏺ Enregistrer';
+    camRecordBtn.className = 'btn danger block';
+    setCamStatus('Enregistrement terminé', 'ok');
+  }
+
+  camRecordBtn.addEventListener('click', ()=>{
+    if(camRecording){
+      camRecorder.stop();
+      return;
+    }
+    if(!camStream) return;
+    camChunks = [];
+
+    if(camMode === 'audio'){
+      // Enregistrement micro seul : pas besoin de canvas, on enregistre le flux micro directement
+      const mime = pickSupportedMime();
+      camRecorder = new MediaRecorder(camStream, mime ? {mimeType:mime} : undefined);
+      camRecorder.ondataavailable = e=>{ if(e.data.size) camChunks.push(e.data); };
+      camRecorder.onstop = ()=> finishRecording(new Blob(camChunks, {type:'audio/webm'}), true);
+      camRecorder.start();
+    } else {
+      camCanvas = document.createElement('canvas');
+      camCtx = camCanvas.getContext('2d');
+      drawCamFrame();
+      const canvasStream = camCanvas.captureStream(30);
+      const audioTracks = camStream.getAudioTracks();
+      const combined = new MediaStream([...canvasStream.getVideoTracks(), ...audioTracks]);
+      const mime = pickSupportedMime();
+      camRecorder = new MediaRecorder(combined, mime ? {mimeType:mime} : undefined);
+      camRecorder.ondataavailable = e=>{ if(e.data.size) camChunks.push(e.data); };
+      camRecorder.onstop = ()=>{
+        cancelAnimationFrame(camDrawLoop);
+        finishRecording(new Blob(camChunks, {type:'video/webm'}), false);
+      };
+      camRecorder.start();
+      if(!running) { computeMaxScroll(); startPrompter(); }
+    }
+
+    camRecording = true;
+    camRecordBtn.textContent = "⏹ Arrêter l'enregistrement";
+    camRecordBtn.className = 'btn ghost block';
+    setCamStatus('Enregistrement en cours…', 'warn');
+  });
+
+  // ---- Envoi de l'enregistrement (vidéo ou audio) vers l'onglet Waveform ----
+  let sharedDecodeCtx = null;
+  camToWaveformBtn.addEventListener('click', async ()=>{
+    if(!lastRecordingBlob) return;
+    camToWaveformBtn.disabled = true;
+    camToWaveformBtn.textContent = '⏳ Transfert…';
+    try{
+      if(!sharedDecodeCtx) sharedDecodeCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const arrayBuf = await lastRecordingBlob.arrayBuffer();
+      const decoded = await sharedDecodeCtx.decodeAudioData(arrayBuf);
+      const label = lastRecordingIsAudioOnly ? 'Voix enregistrée' : 'Audio de la vidéo enregistrée';
+      window.ParadoxWaveform.setAudioBuffer(decoded, label);
+      document.querySelector('.tab-btn[data-tab="waveform"]').click();
+    }catch(err){
+      alert("Impossible d'extraire l'audio de cet enregistrement pour Waveform (format non supporté par ce navigateur). Télécharge le fichier puis réimporte-le manuellement dans l'onglet Waveform si besoin.");
+    }
+    camToWaveformBtn.disabled = false;
+    camToWaveformBtn.textContent = '🎵 Utiliser dans Waveform';
+  });
+})();
+
+/* ==========================================================================
+   2. WAVEFORM VIDÉO
+   ========================================================================== */
+(function(){
+  const canvas = document.getElementById('wave-canvas');
+  const ctx = canvas.getContext('2d');
+
+  function withTimeout(promise, ms, label){
+    return Promise.race([
+      promise,
+      new Promise((_, reject)=> setTimeout(()=> reject(new Error(`${label} : délai dépassé après ${ms/1000}s`)), ms)),
+    ]);
+  }
+
+  if(!AUDIOCONTEXT_SUPPORTED){
+    document.getElementById('wave-support-warning').style.display = 'block';
+    document.getElementById('wave-support-warning').textContent =
+      "⚠️ Ton navigateur ne supporte pas l'API Web Audio, nécessaire pour cet outil.";
+  } else if(!MEDIARECORDER_SUPPORTED){
+    document.getElementById('wave-support-warning').style.display = 'block';
+  }
+
+  let audioCtx = null;
+  let audioBuffer = null;
+  let bgImg = null;
+  let waveStyle = 'bars';
+  let aspect = '1:1';
+
+  // Lecture / prévisualisation
+  let previewSource = null, previewAnalyser = null, previewGain = null;
+  let isPlaying = false;
+  let playStartedAt = 0, playOffset = 0;
+  let previewRafId = null;
+
+  // Export
+  let exporting = false;
+  let exportSource = null, exportRecorder = null, exportChunks = [];
+  let exportRafId = null;
+  let exportCancelled = false;
+
+  const DIMENSIONS = { '1:1':[1080,1080], '9:16':[1080,1920], '16:9':[1920,1080] };
+
+  function setCanvasSize(){
+    const [w,h] = DIMENSIONS[aspect];
+    canvas.width = w; canvas.height = h;
+  }
+
+  // ---- Segmented controls ----
+  function seg(id, onChange){
+    document.getElementById(id).querySelectorAll('button').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        document.getElementById(id).querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+        onChange(b.dataset.v);
+      });
+    });
+  }
+  seg('seg-format', v=>{ aspect = v; setCanvasSize(); drawFrame(); });
+  seg('seg-wavestyle', v=>{ waveStyle = v; drawFrame(); });
+
+  document.getElementById('wave-color').addEventListener('input', drawFrame);
+  document.getElementById('wave-bgcolor').addEventListener('input', drawFrame);
+  document.getElementById('wave-title').addEventListener('input', drawFrame);
+  document.getElementById('wave-subtitle').addEventListener('input', drawFrame);
+
+  // ---- Chargement image de fond ----
+  document.getElementById('bg-file').addEventListener('change', e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      bgImg = new Image();
+      bgImg.onload = drawFrame;
+      bgImg.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+  document.getElementById('btn-remove-bg').addEventListener('click', ()=>{
+    bgImg = null;
+    document.getElementById('bg-file').value = '';
+    drawFrame();
+  });
+
+  // ---- Chargement audio ----
+  const audioStatus = document.getElementById('audio-status');
+  function setAudioStatus(text, kind){
+    audioStatus.className = 'badge' + (kind ? ' ' + kind : '');
+    audioStatus.querySelector('span:last-child').textContent = text;
+  }
+
+  function adoptAudioBuffer(buffer, label){
+    stopPreview();
+    audioBuffer = buffer;
+    setAudioStatus(`🎵 ${label} — ${fmtTime(buffer.duration)}`, 'ok');
+    document.getElementById('time-total').textContent = fmtTime(buffer.duration);
+    playOffset = 0;
+    seekFill.style.width = '0%';
+    timeCurrent.textContent = '00:00';
+    drawFrame();
+  }
+
+  // Permet à l'onglet Téléprompteur d'envoyer directement un enregistrement micro/vidéo ici,
+  // sans passer par un téléchargement puis ré-import manuel.
+  window.ParadoxWaveform = {
+    setAudioBuffer(buffer, label){ adoptAudioBuffer(buffer, label || 'Audio importé'); }
+  };
+
+  document.getElementById('audio-file').addEventListener('change', e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    setAudioStatus('⏳ Chargement en cours…', 'warn');
+    stopPreview();
+    const reader = new FileReader();
+    reader.onload = async ev=>{
+      try{
+        if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const decoded = await audioCtx.decodeAudioData(ev.target.result);
+        const label = file.name.length>28 ? file.name.slice(0,28)+'…' : file.name;
+        adoptAudioBuffer(decoded, label);
+      }catch(err){
+        setAudioStatus('❌ Fichier audio illisible', 'err');
+        audioBuffer = null;
+      }
+    };
+    reader.onerror = ()=> setAudioStatus('❌ Erreur de lecture du fichier', 'err');
+    reader.readAsArrayBuffer(file);
+  });
+
+  // ---- Dessin du frame (aperçu statique ou animé) ----
+  function drawFrame(){
+    const w = canvas.width, h = canvas.height;
+    ctx.clearRect(0,0,w,h);
+
+    if(bgImg){
+      const scale = Math.max(w/bgImg.width, h/bgImg.height);
+      const dx = (w - bgImg.width*scale)/2, dy = (h - bgImg.height*scale)/2;
+      ctx.drawImage(bgImg, dx, dy, bgImg.width*scale, bgImg.height*scale);
+      ctx.fillStyle = 'rgba(0,0,0,0.42)';
+      ctx.fillRect(0,0,w,h);
+    } else {
+      ctx.fillStyle = document.getElementById('wave-bgcolor').value;
+      ctx.fillRect(0,0,w,h);
+    }
+
+    const color = document.getElementById('wave-color').value;
+    let dataArray = null, bufferLength = 0;
+    const activeAnalyser = exporting ? previewAnalyser : previewAnalyser;
+    if(activeAnalyser && (isPlaying || exporting)){
+      bufferLength = activeAnalyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
+      activeAnalyser.getByteFrequencyData(dataArray);
+    }
+
+    ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = Math.max(2, w/220);
+
+    if(dataArray){
+      if(waveStyle === 'bars'){
+        const barW = (w / bufferLength) * 2.5;
+        let x = 0;
+        for(let i=0;i<bufferLength;i++){
+          const bh = (dataArray[i]/255) * h*0.32;
+          ctx.fillRect(x, h/2 - bh/2, Math.max(1,barW-2), bh);
+          x += barW;
+        }
+      } else if(waveStyle === 'line'){
+        ctx.beginPath();
+        const slice = w/bufferLength;
+        let x = 0;
+        for(let i=0;i<bufferLength;i++){
+          const v = dataArray[i]/128.0;
+          const y = (v*h/5) + h/2;
+          i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+          x += slice;
+        }
+        ctx.stroke();
+      } else if(waveStyle === 'circle'){
+        const cx=w/2, cy=h/2, baseR = Math.min(w,h)*0.18;
+        ctx.beginPath();
+        for(let i=0;i<bufferLength;i++){
+          const angle = (i/bufferLength) * Math.PI*2;
+          const r = baseR + (dataArray[i]/255) * Math.min(w,h)*0.18;
+          const x = cx + Math.cos(angle)*r, y = cy + Math.sin(angle)*r;
+          i===0 ? ctx.moveTo(x,y) : ctx.lineTo(x,y);
+        }
+        ctx.closePath(); ctx.stroke();
+      }
+    } else {
+      // Aperçu statique au repos
+      const n = 40;
+      for(let i=0;i<n;i++){
+        const bh = Math.sin(i*0.3)*h*0.05 + h*0.08;
+        ctx.fillRect(w*0.15 + i*(w*0.7/n), h/2 - bh/2, (w*0.7/n)*0.65, bh);
+      }
+    }
+
+    // Titre / sous-titre
+    const title = document.getElementById('wave-title').value.trim();
+    const subtitle = document.getElementById('wave-subtitle').value.trim();
+    if(title){
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+      ctx.font = `700 ${Math.round(w*0.055)}px 'Space Grotesk', sans-serif`;
+      ctx.fillText(title, w/2, h*0.14);
+    }
+    if(subtitle){
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.font = `500 ${Math.round(w*0.03)}px 'Inter', sans-serif`;
+      ctx.fillText(subtitle, w/2, h*0.14 + Math.round(w*0.045));
+    }
+
+    if(isPlaying || exporting) previewRafId = requestAnimationFrame(drawFrame);
+  }
+
+  // ---- Lecture / pause / stop / seek / volume ----
+  const playBtn = document.getElementById('btn-play-audio');
+  const stopBtn = document.getElementById('btn-stop-audio');
+  const seekbar = document.getElementById('seekbar');
+  const seekFill = document.getElementById('seekbar-fill');
+  const volSlider = document.getElementById('vol-slider');
+  const timeCurrent = document.getElementById('time-current');
+
+  function currentPlaybackTime(){
+    if(!isPlaying) return playOffset;
+    return playOffset + (audioCtx.currentTime - playStartedAt);
+  }
+
+  function updateSeekUI(){
+    if(!audioBuffer) return;
+    const t = Math.min(audioBuffer.duration, currentPlaybackTime());
+    seekFill.style.width = (t/audioBuffer.duration*100) + '%';
+    timeCurrent.textContent = fmtTime(t);
+    if(isPlaying) requestAnimationFrame(updateSeekUI);
+  }
+
+  async function startPreviewAt(offset){
+    if(!audioBuffer) return;
+    if(audioCtx.state === 'suspended') await audioCtx.resume();
+    if(previewSource){ try{ previewSource.stop(); }catch(e){} }
+    previewSource = audioCtx.createBufferSource();
+    previewSource.buffer = audioBuffer;
+    previewAnalyser = audioCtx.createAnalyser();
+    previewAnalyser.fftSize = 256;
+    previewGain = audioCtx.createGain();
+    previewGain.gain.value = volSlider.value/100;
+    previewSource.connect(previewAnalyser);
+    previewAnalyser.connect(previewGain);
+    previewGain.connect(audioCtx.destination);
+    previewSource.start(0, offset);
+    playStartedAt = audioCtx.currentTime;
+    playOffset = offset;
+    isPlaying = true;
+    playBtn.textContent = '⏸';
+    previewSource.onended = ()=>{
+      if(!isPlaying) return; // déjà arrêté manuellement
+      isPlaying = false;
+      playOffset = 0;
+      playBtn.textContent = '▶';
+      seekFill.style.width = '0%';
+      timeCurrent.textContent = '00:00';
+    };
+    drawFrame();
+    updateSeekUI();
+  }
+
+  function stopPreview(){
+    if(previewSource){ try{ previewSource.stop(); }catch(e){} previewSource = null; }
+    isPlaying = false;
+    playBtn.textContent = '▶';
+  }
+
+  playBtn.addEventListener('click', async ()=>{
+    if(!audioBuffer) return alert("Choisis d'abord un fichier audio (.mp3 ou .wav).");
+    if(isPlaying){
+      playOffset = currentPlaybackTime();
+      stopPreview();
+    } else {
+      await startPreviewAt(playOffset >= (audioBuffer?.duration||0) ? 0 : playOffset);
+    }
+  });
+  stopBtn.addEventListener('click', ()=>{
+    stopPreview();
+    playOffset = 0;
+    seekFill.style.width = '0%';
+    timeCurrent.textContent = '00:00';
+    drawFrame();
+  });
+  seekbar.addEventListener('click', async (e)=>{
+    if(!audioBuffer) return;
+    const rect = seekbar.getBoundingClientRect();
+    const ratio = Math.min(1, Math.max(0, (e.clientX-rect.left)/rect.width));
+    const newOffset = ratio * audioBuffer.duration;
+    if(isPlaying){ await startPreviewAt(newOffset); }
+    else { playOffset = newOffset; seekFill.style.width = ratio*100+'%'; timeCurrent.textContent = fmtTime(newOffset); }
+  });
+  volSlider.addEventListener('input', ()=>{
+    if(previewGain) previewGain.gain.value = volSlider.value/100;
+  });
+
+  // ---- Export vidéo ----
+  const exportBtn = document.getElementById('btn-export');
+  const cancelBtn = document.getElementById('btn-cancel-export');
+  const exportStatus = document.getElementById('export-status');
+  const exportProgressWrap = document.getElementById('export-progress-wrap');
+  const exportProgressBar = document.getElementById('export-progress-bar');
+  const exportVideoPreview = document.getElementById('export-video-preview');
+  const exportDownloadLink = document.getElementById('export-download-link');
+
+  let wakeLock = null;
+  async function acquireWakeLock(){
+    try{
+      if('wakeLock' in navigator){ wakeLock = await navigator.wakeLock.request('screen'); }
+    }catch(e){ wakeLock = null; } // pas grave si indisponible, on continue sans
+  }
+  function releaseWakeLock(){
+    if(wakeLock){ wakeLock.release().catch(()=>{}); wakeLock = null; }
+  }
+
+  const blockOverlay = document.getElementById('export-block-overlay');
+  const blockCountdown = document.getElementById('export-block-countdown');
+  const blockCancelBtn = document.getElementById('export-block-cancel');
+  let exportEndWallClock = null; // Date.now() prévu de fin — horloge murale, ne se fige jamais
+  let countdownTick = null;
+  let forceStopFn = null; // assignée à chaque export, utilisée par la vérification de visibilité
+
+  function startCountdownDisplay(){
+    if(countdownTick) clearInterval(countdownTick);
+    countdownTick = setInterval(()=>{
+      const remainMs = Math.max(0, exportEndWallClock - Date.now());
+      const s = Math.ceil(remainMs/1000);
+      blockCountdown.textContent = `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+      if(remainMs <= 0) clearInterval(countdownTick);
+    }, 250);
+  }
+
+  function onExportVisibilityChange(){
+    if(!exporting) return;
+    if(document.visibilityState === 'hidden'){
+      exportStatus.textContent = "⚠️ Onglet passé en arrière-plan — l'export est mis en pause par ton téléphone.";
+    } else if(document.visibilityState === 'visible'){
+      // De retour sur l'onglet : si le temps prévu est déjà dépassé (le tab a été gelé pendant
+      // l'absence), on force l'arrêt tout de suite plutôt que d'attendre un setTimeout qui a pu
+      // lui-même être gelé et ne jamais se déclencher.
+      if(exportEndWallClock && Date.now() >= exportEndWallClock && forceStopFn) forceStopFn();
+    }
+  }
+  document.addEventListener('visibilitychange', onExportVisibilityChange);
+
+  exportBtn.addEventListener('click', async ()=>{
+    if(!audioBuffer) return alert("Importe d'abord un fichier audio avant d'exporter.");
+    if(!MEDIARECORDER_SUPPORTED) return alert("L'export vidéo n'est pas supporté par ce navigateur.");
+    if(exporting) return;
+
+    stopPreview(); // évite un doublon audio pendant l'export
+
+    exporting = true;
+    exportCancelled = false;
+    exportBtn.disabled = true;
+    cancelBtn.style.display = 'inline-flex';
+    exportVideoPreview.style.display = 'none';
+    exportDownloadLink.style.display = 'none';
+    exportProgressWrap.style.display = 'block';
+    exportProgressBar.style.width = '0%';
+    exportStatus.textContent = "⏳ Préparation de l'export…";
+    blockOverlay.style.display = 'flex';
+
+    function abortExportWithError(err){
+      console.error('Export waveform : échec', err);
+      if(countdownTick){ clearInterval(countdownTick); countdownTick = null; }
+      exportEndWallClock = null;
+      forceStopFn = null;
+      blockOverlay.style.display = 'none';
+      exportProgressWrap.style.display = 'none';
+      releaseWakeLock();
+      exporting = false;
+      exportBtn.disabled = false;
+      cancelBtn.style.display = 'none';
+      const detail = (err && err.message) ? err.message : String(err);
+      exportStatus.textContent = "❌ L'export n'a pas pu démarrer : " + detail;
+      alert("L'export a échoué : " + detail + "\n\nAstuce : vérifie que la page est bien ouverte en https:// (pas en fichier local), et réessaie.");
+    }
+
+    try{
+      await acquireWakeLock();
+
+      // Recrée le contexte audio s'il a été fermé ou n'existe pas (ex : après une erreur précédente).
+      if(!audioCtx || audioCtx.state === 'closed'){
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if(audioCtx.state === 'suspended') await withTimeout(audioCtx.resume(), 5000, "Reprise du contexte audio");
+
+      if(!canvas.captureStream){
+        throw new Error("captureStream() indisponible sur ce navigateur/contexte (HTTPS requis, pas un fichier local).");
+      }
+      const stream = canvas.captureStream(30);
+      const dest = audioCtx.createMediaStreamDestination();
+
+      exportSource = audioCtx.createBufferSource();
+      exportSource.buffer = audioBuffer;
+      previewAnalyser = audioCtx.createAnalyser();
+      previewAnalyser.fftSize = 256;
+      exportSource.connect(previewAnalyser);
+      exportSource.connect(dest);
+
+      const combined = new MediaStream([...stream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
+      if(combined.getVideoTracks().length === 0){
+        throw new Error("Aucune piste vidéo capturée depuis le canvas.");
+      }
+      const mime = pickSupportedMime();
+      exportRecorder = new MediaRecorder(combined, mime ? {mimeType:mime} : undefined);
+      exportChunks = [];
+
+      let safetyTimeout = null;
+      function finishExport(){
+        if(safetyTimeout){ clearTimeout(safetyTimeout); safetyTimeout = null; }
+        if(countdownTick){ clearInterval(countdownTick); countdownTick = null; }
+        exportEndWallClock = null;
+        forceStopFn = null;
+        blockOverlay.style.display = 'none';
+        releaseWakeLock();
+        exporting = false;
+        exportBtn.disabled = false;
+        cancelBtn.style.display = 'none';
+        if(exportCancelled){
+          exportStatus.textContent = '✕ Export annulé.';
+          exportProgressWrap.style.display = 'none';
+          return;
+        }
+        if(!exportChunks.length){
+          exportStatus.textContent = "❌ Export vide — aucune donnée enregistrée. Réessaie sans changer d'app.";
+          exportProgressWrap.style.display = 'none';
+          return;
+        }
+        const blob = new Blob(exportChunks, {type:'video/webm'});
+        const url = URL.createObjectURL(blob);
+        exportVideoPreview.src = url;
+        exportVideoPreview.style.display = 'block';
+        exportDownloadLink.href = url;
+        exportDownloadLink.download = `waveform-${Date.now()}.webm`;
+        exportDownloadLink.style.display = 'flex';
+        exportProgressBar.style.width = '100%';
+        exportStatus.textContent = "✅ Vidéo prête — regarde l'aperçu puis télécharge-la.";
+      }
+      forceStopFn = function(){
+        if(exportRecorder && exportRecorder.state !== 'inactive'){
+          exportStatus.textContent = "⏳ Finalisation forcée (l'export a pris plus de temps que prévu)…";
+          try{ exportSource.stop(); }catch(e){}
+          try{ exportRecorder.stop(); }catch(e){}
+        } else {
+          finishExport();
+        }
+      };
+
+      exportRecorder.onerror = e=> abortExportWithError(e.error || new Error('Erreur MediaRecorder'));
+      exportRecorder.ondataavailable = e=>{ if(e.data.size) exportChunks.push(e.data); };
+      exportRecorder.onstop = finishExport;
+
+      const startTs = audioCtx.currentTime;
+      exportSource.start(0);
+      exportRecorder.start();
+      drawFrame();
+
+      const durMs = audioBuffer.duration * 1000;
+      exportEndWallClock = Date.now() + durMs + 6000; // marge de 6s pour la finalisation
+      startCountdownDisplay();
+
+      const progressTick = setInterval(()=>{
+        const elapsed = (audioCtx.currentTime - startTs) * 1000;
+        const pct = Math.min(99, (elapsed/durMs)*100);
+        exportProgressBar.style.width = pct + '%';
+        exportStatus.textContent = `⏳ Export en cours… ${Math.round(pct)}%`;
+        if(elapsed >= durMs || exportCancelled) clearInterval(progressTick);
+      }, 200);
+
+      // Filet de sécurité (horloge murale, indépendante de audioCtx.currentTime qui se fige aussi
+      // en arrière-plan) : si l'enregistreur ne s'arrête jamais tout seul, on force l'arrêt.
+      safetyTimeout = setTimeout(forceStopFn, durMs + 8000);
+
+      exportSource.onended = ()=>{
+        if(exportRecorder && exportRecorder.state !== 'inactive') exportRecorder.stop();
+      };
+
+      function doCancel(){
+        exportCancelled = true;
+        try{ exportSource.stop(); }catch(e){}
+        if(exportRecorder && exportRecorder.state !== 'inactive') exportRecorder.stop();
+        else finishExport();
+      }
+      cancelBtn.onclick = doCancel;
+      blockCancelBtn.onclick = doCancel;
+
+    }catch(err){
+      abortExportWithError(err);
+    }
+  });
+
+  setCanvasSize();
+  drawFrame();
+})();
+
+/* ==========================================================================
+   UTILITAIRES PARTAGÉS : logos d'équipes, arrière-plan logo, export image
+   (utilisés par les onglets Bulletin ET Pronostics)
+   ========================================================================== */
+const CP_LOGO_CACHE = {};
+function cpLoadImageSafe(src){
+  return new Promise(resolve=>{
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = ()=> resolve(img);
+    img.onerror = ()=> resolve(null);
+    img.src = src;
+  });
+}
+function cpLoadImageFromDataUrl(dataUrl){
+  return new Promise(resolve=>{
+    const img = new Image();
+    img.onload = ()=> resolve(img);
+    img.onerror = ()=> resolve(null);
+    img.src = dataUrl;
+  });
+}
+async function cpWikipediaTeamLogo(name){
+  const key = name.trim().toLowerCase();
+  if(key in CP_LOGO_CACHE) return CP_LOGO_CACHE[key];
+  try{
+    const params = new URLSearchParams({
+      action: 'query', generator: 'search', gsrsearch: `${name} football club`,
+      gsrlimit: '1', prop: 'pageimages', piprop: 'thumbnail', pithumbsize: '400',
+      format: 'json', origin: '*',
+    });
+    const r = await fetch(`https://en.wikipedia.org/w/api.php?${params.toString()}`);
+    if(!r.ok){ CP_LOGO_CACHE[key] = null; return null; }
+    const data = await r.json();
+    const pages = data?.query?.pages || {};
+    for(const p of Object.values(pages)){
+      const src = p?.thumbnail?.source;
+      if(src){ const img = await cpLoadImageSafe(src); CP_LOGO_CACHE[key] = img; return img; }
+    }
+    CP_LOGO_CACHE[key] = null;
+    return null;
+  }catch(e){ CP_LOGO_CACHE[key] = null; return null; }
+}
+
+/* Dessine le logo de marque en filigrane géant derrière la composition (flou + luminosité réglables) */
+function cpDrawBackgroundLogo(ctx, canvas, img, opts){
+  opts = opts || {};
+  const blur = opts.blur || 0, opacityPct = opts.opacityPct==null?15:opts.opacityPct, scalePct = opts.scalePct||100;
+  if(!img) return;
+  ctx.save();
+  const targetW = canvas.width * (scalePct/100);
+  const ratio = targetW / img.width;
+  const dw = img.width*ratio, dh = img.height*ratio;
+  const cx = canvas.width/2, cy = canvas.height/2;
+  ctx.filter = blur > 0 ? `blur(${blur}px)` : 'none';
+  ctx.globalAlpha = Math.max(0, Math.min(1, opacityPct/100));
+  ctx.drawImage(img, cx-dw/2, cy-dh/2, dw, dh);
+  ctx.filter = 'none';
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+/* Panneau d'export réutilisable : nom de fichier + format (JPG/PNG/WEBP), relié à un canvas déjà dessiné */
+function cpSetupExportPanel(cfg){
+  const canvas = cfg.canvas, nameInput = cfg.nameInput, extTag = cfg.extTag,
+        formatSeg = cfg.formatSeg, downloadLink = cfg.downloadLink, defaultName = cfg.defaultName || 'image';
+  let format = 'jpeg';
+  let hasContent = false;
+  const mimeFor = f => f==='png' ? 'image/png' : f==='webp' ? 'image/webp' : 'image/jpeg';
+  const extFor = f => f==='png' ? '.png' : f==='webp' ? '.webp' : '.jpg';
+  function sanitize(name){
+    const clean = (name||'').trim().replace(/[^a-z0-9\-_ ]/gi,'').replace(/\s+/g,'-');
+    return clean || defaultName;
+  }
+  function refresh(){
+    extTag.textContent = extFor(format);
+    if(!hasContent) return;
+    const quality = format==='jpeg' ? 0.92 : undefined;
+    const url = canvas.toDataURL(mimeFor(format), quality);
+    downloadLink.href = url;
+    downloadLink.download = sanitize(nameInput.value) + extFor(format);
+    downloadLink.style.display = 'flex';
+  }
+  formatSeg.querySelectorAll('button').forEach(b=>{
+    b.addEventListener('click', ()=>{
+      formatSeg.querySelectorAll('button').forEach(x=>x.classList.remove('active'));
+      b.classList.add('active');
+      format = b.dataset.v;
+      refresh();
+    });
+  });
+  nameInput.addEventListener('input', refresh);
+  refresh();
+  return { notifyGenerated(){ hasContent = true; refresh(); } };
+}
+
+/* ==========================================================================
+   3. BULLETIN DE RÉSULTATS (logos via Wikipédia, 100% client)
+   ========================================================================== */
+(function(){
+  const canvas = document.getElementById('bl-canvas');
+  const ctx = canvas.getContext('2d');
+  const rowsWrap = document.getElementById('bl-rows');
+  const statusEl = document.getElementById('bl-status');
+  const BRAND_KEY = 'bulletin_brand_v1';
+
+  const blExport = cpSetupExportPanel({
+    canvas, nameInput: document.getElementById('bl-export-name'), extTag: document.getElementById('bl-export-ext'),
+    formatSeg: document.getElementById('bl-format-seg'), downloadLink: document.getElementById('bl-download'), defaultName: 'bulletin',
+  });
+
+  const blBlurRange = document.getElementById('bl-bglogo-blur'), blOpacRange = document.getElementById('bl-bglogo-opacity'), blScaleRange = document.getElementById('bl-bglogo-scale');
+  const blValBlur = document.getElementById('val-bl-blur'), blValOpac = document.getElementById('val-bl-opac'), blValScale = document.getElementById('val-bl-scale');
+  blBlurRange.addEventListener('input', ()=> blValBlur.textContent = blBlurRange.value+'px');
+  blOpacRange.addEventListener('input', ()=> blValOpac.textContent = blOpacRange.value+'%');
+  blScaleRange.addEventListener('input', ()=> blValScale.textContent = blScaleRange.value+'%');
+
+  let rowCounter = 0;
+  let brandLogoDataUrl = null;
+  const logoCache = {}; // nom normalisé -> {img, source} | null (introuvable)
+  const rowLogos = {};  // rowId -> {home: dataURL|null, away: dataURL|null} (overrides manuels)
+
+  function setStatus(text, kind){
+    statusEl.style.display = text ? 'flex' : 'none';
+    statusEl.innerHTML = `<span>${kind==='err'?'⚠️':kind==='ok'?'✅':'⏳'}</span><span>${text}</span>`;
+  }
+
+  /* ---- Persistance de la marque ---- */
+  try{
+    const saved = JSON.parse(localStorage.getItem(BRAND_KEY) || 'null');
+    if(saved){
+      document.getElementById('bl-brand-name').value = saved.name || 'PARADOX RATIO';
+      if(saved.logo){
+        brandLogoDataUrl = saved.logo;
+        const prev = document.getElementById('bl-brand-logo-preview');
+        prev.src = saved.logo; prev.style.display = 'block';
+        document.getElementById('bl-brand-logo-empty').style.display = 'none';
+      }
+    }
+  }catch(e){}
+
+  function persistBrand(){
+    try{
+      localStorage.setItem(BRAND_KEY, JSON.stringify({
+        name: document.getElementById('bl-brand-name').value,
+        logo: brandLogoDataUrl,
+      }));
+    }catch(e){}
+  }
+  document.getElementById('bl-brand-name').addEventListener('input', persistBrand);
+  document.getElementById('bl-brand-logo').addEventListener('change', e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      brandLogoDataUrl = ev.target.result;
+      const prev = document.getElementById('bl-brand-logo-preview');
+      prev.src = brandLogoDataUrl; prev.style.display = 'block';
+      document.getElementById('bl-brand-logo-empty').style.display = 'none';
+      persistBrand();
+    };
+    reader.readAsDataURL(file);
+  });
+  document.getElementById('bl-brand-logo-clear').addEventListener('click', ()=>{
+    brandLogoDataUrl = null;
+    document.getElementById('bl-brand-logo').value = '';
+    document.getElementById('bl-brand-logo-preview').style.display = 'none';
+    document.getElementById('bl-brand-logo-empty').style.display = 'flex';
+    persistBrand();
+  });
+
+  /* ---- Gestion des lignes de match ---- */
+  function addRow(prefill){
+    const id = 'r' + (rowCounter++);
+    rowLogos[id] = {home:null, away:null};
+    const div = document.createElement('div');
+    div.className = 'card';
+    div.style.background = 'var(--panel3)';
+    div.style.marginBottom = '10px';
+    div.dataset.rowId = id;
+    div.innerHTML = `
+      <div class="row">
+        <div class="field"><label>Équipe A</label><input type="text" class="bl-home" value="${prefill?.home||''}" placeholder="Ex : PSG"></div>
+        <div class="field"><label>Équipe B</label><input type="text" class="bl-away" value="${prefill?.away||''}" placeholder="Ex : Marseille"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Score A</label><input type="text" class="bl-hs" value="${prefill?.hs||''}" placeholder="2"></div>
+        <div class="field"><label>Score B</label><input type="text" class="bl-as" value="${prefill?.as||''}" placeholder="1"></div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Résultat</label>
+          <div class="seg bl-seg-result">
+            <button type="button" data-v="gagne" class="active">✅ Gagné</button>
+            <button type="button" data-v="perdu">❌ Perdu</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Équipe concernée</label>
+          <div class="seg bl-seg-side">
+            <button type="button" data-v="home" class="active">◀ Équipe A</button>
+            <button type="button" data-v="away">Équipe B ▶</button>
+          </div>
+        </div>
+      </div>
+      <div class="row" style="align-items:flex-end;">
+        <div class="field">
+          <label>Logo équipe A <span class="bl-logo-status" data-team="home" style="color:var(--text-dim); text-transform:none; font-weight:400;">non recherché</span></label>
+          <input type="file" class="bl-home-logo-file" accept="image/*">
+        </div>
+        <div class="field">
+          <label>Logo équipe B <span class="bl-logo-status" data-team="away" style="color:var(--text-dim); text-transform:none; font-weight:400;">non recherché</span></label>
+          <input type="file" class="bl-away-logo-file" accept="image/*">
+        </div>
+        <button type="button" class="btn danger sm bl-remove-row" style="flex:0 0 auto;">✕</button>
+      </div>`;
+    rowsWrap.appendChild(div);
+
+    div.querySelectorAll('.bl-seg-result button').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        div.querySelectorAll('.bl-seg-result button').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+      });
+    });
+    div.querySelectorAll('.bl-seg-side button').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        div.querySelectorAll('.bl-seg-side button').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+      });
+    });
+    div.querySelector('.bl-remove-row').addEventListener('click', ()=>{
+      delete rowLogos[id];
+      div.remove();
+    });
+    div.querySelector('.bl-home-logo-file').addEventListener('change', e=>{
+      const f = e.target.files[0]; if(!f) return;
+      const reader = new FileReader();
+      reader.onload = ev=>{
+        rowLogos[id].home = ev.target.result;
+        div.querySelector('.bl-logo-status[data-team="home"]').textContent = 'logo importé ✓';
+      };
+      reader.readAsDataURL(f);
+    });
+    div.querySelector('.bl-away-logo-file').addEventListener('change', e=>{
+      const f = e.target.files[0]; if(!f) return;
+      const reader = new FileReader();
+      reader.onload = ev=>{
+        rowLogos[id].away = ev.target.result;
+        div.querySelector('.bl-logo-status[data-team="away"]').textContent = 'logo importé ✓';
+      };
+      reader.readAsDataURL(f);
+    });
+    return div;
+  }
+  document.getElementById('bl-add-row').addEventListener('click', ()=> addRow());
+  // Deux lignes de départ pour montrer l'usage
+  addRow({home:'PSG', away:'Marseille', hs:'2', as:'1'});
+  addRow({home:'Real Madrid', away:'Barcelone', hs:'1', as:'1'});
+
+  /* ---- Récupération des logos via Wikipédia : fonctions partagées cpWikipediaTeamLogo / cpLoadImageSafe / cpLoadImageFromDataUrl ---- */
+  const wikipediaTeamLogo = cpWikipediaTeamLogo;
+  const loadImageFromDataUrl = cpLoadImageFromDataUrl;
+
+  /* ---- Dessin ---- */
+  function drawInitials(cx, cy, box, name){
+    ctx.save();
+    ctx.fillStyle = '#262a38';
+    ctx.beginPath(); ctx.arc(cx, cy, box/2, 0, Math.PI*2); ctx.fill();
+    const initials = name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase() || '?';
+    ctx.fillStyle = '#e6e6e6';
+    ctx.font = `700 ${Math.round(box*0.38)}px 'Inter', sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(initials, cx, cy+2);
+    ctx.restore();
+  }
+  function drawFitImage(img, cx, cy, box){
+    if(!img){ return false; }
+    const ratio = Math.min(box/img.width, box/img.height);
+    const dw = img.width*ratio, dh = img.height*ratio;
+    ctx.drawImage(img, cx-dw/2, cy-dh/2, dw, dh);
+    return true;
+  }
+  function wrapTeamName(text, font, maxWidth){
+    ctx.font = font;
+    const words = text.split(' ');
+    const lines = []; let cur = '';
+    for(const w of words){
+      const test = cur ? cur + ' ' + w : w;
+      if(ctx.measureText(test).width > maxWidth && cur){ lines.push(cur); cur = w; }
+      else cur = test;
+      if(lines.length >= 2) break;
+    }
+    if(cur && lines.length < 2) lines.push(cur);
+    return lines.slice(0,2).length ? lines.slice(0,2) : [text];
+  }
+
+  async function resolveRowLogos(rowEl, id){
+    const home = rowEl.querySelector('.bl-home').value.trim() || 'Équipe A';
+    const away = rowEl.querySelector('.bl-away').value.trim() || 'Équipe B';
+    const overrides = rowLogos[id] || {};
+    const statusHome = rowEl.querySelector('.bl-logo-status[data-team="home"]');
+    const statusAway = rowEl.querySelector('.bl-logo-status[data-team="away"]');
+
+    let homeImg = null, awayImg = null;
+    if(overrides.home) homeImg = await loadImageFromDataUrl(overrides.home);
+    else { statusHome.textContent = 'recherche…'; homeImg = await wikipediaTeamLogo(home); statusHome.textContent = homeImg ? 'trouvé via Wikipédia ✓' : 'introuvable (initiales)'; }
+    if(overrides.away) awayImg = await loadImageFromDataUrl(overrides.away);
+    else { statusAway.textContent = 'recherche…'; awayImg = await wikipediaTeamLogo(away); statusAway.textContent = awayImg ? 'trouvé via Wikipédia ✓' : 'introuvable (initiales)'; }
+
+    return { home, away, homeImg, awayImg };
+  }
+
+  async function generateBulletin(){
+    const rowEls = Array.from(rowsWrap.children);
+    if(!rowEls.length){ setStatus("Ajoute au moins un match.", 'err'); return; }
+
+    document.getElementById('bl-generate').disabled = true;
+    setStatus('⏳ Récupération des logos via Wikipédia…', 'warn');
+
+    const accent = document.getElementById('bl-accent').value;
+    const bgColor = document.getElementById('bl-bgcolor').value;
+    const showTF = document.getElementById('bl-show-tf').checked;
+    const showFooter = document.getElementById('bl-show-footer').checked;
+    const brandName = document.getElementById('bl-brand-name').value.trim() || 'MA MARQUE';
+    const competition = document.getElementById('bl-competition').value.trim();
+
+    const rows = [];
+    for(const el of rowEls){
+      const id = el.dataset.rowId;
+      const resolved = await resolveRowLogos(el, id);
+      rows.push({
+        home: resolved.home, away: resolved.away,
+        homeImg: resolved.homeImg, awayImg: resolved.awayImg,
+        hs: el.querySelector('.bl-hs').value.trim(), as: el.querySelector('.bl-as').value.trim(),
+        won: el.querySelector('.bl-seg-result button.active').dataset.v === 'gagne',
+        side: el.querySelector('.bl-seg-side button.active').dataset.v,
+      });
+    }
+
+    let brandImg = null;
+    if(brandLogoDataUrl) brandImg = await loadImageFromDataUrl(brandLogoDataUrl);
+
+    setStatus('🎨 Composition de l\u2019image…', 'warn');
+
+    const W = 1080, rowH = 190, headerH = 300, footerH = showFooter ? 130 : 30;
+    const H = headerH + rows.length*rowH + footerH;
+    canvas.width = W; canvas.height = H;
+
+    // Fond dégradé
+    const grad = ctx.createLinearGradient(0,0,0,H);
+    const c = hexToRgb(bgColor);
+    grad.addColorStop(0, `rgb(${Math.min(255,c.r+20)},${Math.min(255,c.g+20)},${Math.min(255,c.b+20)})`);
+    grad.addColorStop(1, `rgb(${Math.max(0,c.r-8)},${Math.max(0,c.g-6)},${Math.max(0,c.b-6)})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,W,H);
+
+    // Logo de marque en filigrane (arrière-plan)
+    if(brandImg && document.getElementById('bl-bglogo-enable').checked){
+      cpDrawBackgroundLogo(ctx, canvas, brandImg, {
+        blur: +blBlurRange.value, opacityPct: +blOpacRange.value, scalePct: +blScaleRange.value,
+      });
+    }
+
+    // En-tête
+    const pad = 44, logoBox = 130;
+    if(brandImg) drawFitImage(brandImg, pad+logoBox/2, 40+logoBox/2, logoBox);
+    const titleX = pad + logoBox + 26;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#eeeeee';
+    ctx.font = `700 50px 'Space Grotesk', sans-serif`;
+    ctx.fillText(brandName.toUpperCase(), titleX, 48+40);
+    ctx.fillStyle = accent;
+    ctx.font = `700 62px 'Space Grotesk', sans-serif`;
+    ctx.fillText('RÉSULTATS', titleX, 48+60+56);
+
+    if(competition){
+      const compText = competition.toUpperCase();
+      ctx.font = `700 28px 'Inter', sans-serif`;
+      const tw = ctx.measureText(compText).width;
+      const pillY = headerH - 66;
+      roundedRect(W/2-tw/2-26, pillY, tw+52, 50, 25, null, accent, 2);
+      ctx.fillStyle = '#e6e6e6'; ctx.textAlign = 'left';
+      ctx.fillText(compText, W/2-tw/2, pillY+34);
+    }
+
+    // Lignes de match
+    const nameA_x0 = pad+110, nameA_x1 = pad+340;
+    const logoA_cx = nameA_x1+70, scoreCx = W/2, logoB_cx = W-nameA_x1-70;
+    const nameB_x0 = W-nameA_x1, nameB_x1 = W-pad-110;
+
+    let y = headerH;
+    for(const row of rows){
+      const cardTop = y+18, cardBottom = y+rowH-18, cy = (cardTop+cardBottom)/2;
+      roundedRect(pad, cardTop, W-pad*2, cardBottom-cardTop, 20, 'rgba(11,28,19,0.55)', 'rgba(255,255,255,0.08)', 2);
+
+      const iconCx = row.side === 'away' ? (W - pad - 50) : (pad+50), iconR = 32;
+      ctx.beginPath(); ctx.arc(iconCx, cy, iconR, 0, Math.PI*2);
+      ctx.fillStyle = row.won ? '#3ac460' : '#de3e4c'; ctx.fill();
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+      if(row.won){
+        ctx.beginPath(); ctx.moveTo(iconCx-15, cy); ctx.lineTo(iconCx-3, cy+13); ctx.lineTo(iconCx+17, cy-15); ctx.stroke();
+      } else {
+        ctx.beginPath(); ctx.moveTo(iconCx-13, cy-13); ctx.lineTo(iconCx+13, cy+13); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(iconCx-13, cy+13); ctx.lineTo(iconCx+13, cy-13); ctx.stroke();
+      }
+
+      ctx.font = `700 30px 'Inter', sans-serif`;
+      [[nameA_x0,nameA_x1,row.home,'left'],[nameB_x0,nameB_x1,row.away,'right']].forEach(([x0,x1,name,align])=>{
+        const lines = wrapTeamName(name, `700 30px 'Inter', sans-serif`, x1-x0);
+        const lh = 36, startY = cy - (lines.length*lh)/2 + lh*0.75;
+        ctx.fillStyle = '#e8e8e8'; ctx.textAlign = align === 'left' ? 'left' : 'right';
+        const lx = align === 'left' ? x0 : x1;
+        lines.forEach((ln,i)=> ctx.fillText(ln, lx, startY+i*lh));
+      });
+      ctx.textAlign = 'left';
+
+      const logoSz = 84;
+      if(!drawFitImage(row.homeImg, logoA_cx, cy, logoSz)) drawInitials(logoA_cx, cy, logoSz, row.home);
+      if(!drawFitImage(row.awayImg, logoB_cx, cy, logoSz)) drawInitials(logoB_cx, cy, logoSz, row.away);
+
+      const scoreText = `${row.hs||'-'} - ${row.as||'-'}`;
+      const boxW=168, boxH=96;
+      roundedRect(scoreCx-boxW/2, cy-boxH/2, boxW, boxH, 14, '#000', null, 0);
+      ctx.font = `700 52px 'Space Grotesk', sans-serif`;
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+      ctx.fillText(scoreText, scoreCx, cy-boxH/2+8+44);
+      if(showTF){
+        ctx.font = `600 20px 'Inter', sans-serif`;
+        ctx.fillStyle = accent;
+        ctx.fillText('TF', scoreCx, cy+boxH/2-14);
+      }
+      ctx.textAlign = 'left';
+
+      y += rowH;
+    }
+
+    if(showFooter){
+      const footerTop = H - footerH;
+      ctx.strokeStyle = 'rgba(255,255,255,0.12)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(pad, footerTop+24); ctx.lineTo(W-pad, footerTop+24); ctx.stroke();
+      const tagline = `${brandName.toUpperCase()} — VOTRE RÉFÉRENCE N°1`;
+      ctx.font = `700 30px 'Space Grotesk', sans-serif`;
+      const tw = ctx.measureText(tagline).width;
+      ctx.fillStyle = accent; ctx.textAlign = 'left';
+      ctx.fillText(tagline, W/2-tw/2, footerTop+52+30);
+    }
+
+    blExport.notifyGenerated();
+    setStatus('✅ Bulletin généré — choisis un nom/format à droite puis télécharge-le.', 'ok');
+    document.getElementById('bl-generate').disabled = false;
+  }
+
+  function hexToRgb(hex){
+    const h = hex.replace('#','');
+    return { r: parseInt(h.substring(0,2),16), g: parseInt(h.substring(2,4),16), b: parseInt(h.substring(4,6),16) };
+  }
+  function roundedRect(x, y, w, h, r, fill, stroke, strokeWidth){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+    if(fill){ ctx.fillStyle = fill; ctx.fill(); }
+    if(stroke && strokeWidth){ ctx.strokeStyle = stroke; ctx.lineWidth = strokeWidth; ctx.stroke(); }
+  }
+
+  document.getElementById('bl-generate').addEventListener('click', generateBulletin);
+})();
+
+/* ==========================================================================
+   4. PRONOSTICS EXPERT (fond futuriste, cotes, confiance, risque)
+   ========================================================================== */
+(function(){
+  const canvas = document.getElementById('pr-canvas');
+  const ctx = canvas.getContext('2d');
+  const rowsWrap = document.getElementById('pr-rows');
+  const statusEl = document.getElementById('pr-status');
+  const BRAND_KEY = 'pronostics_brand_v1';
+
+  const prExport = cpSetupExportPanel({
+    canvas, nameInput: document.getElementById('pr-export-name'), extTag: document.getElementById('pr-export-ext'),
+    formatSeg: document.getElementById('pr-format-seg'), downloadLink: document.getElementById('pr-download'), defaultName: 'pronostics',
+  });
+
+  const prBlurRange = document.getElementById('pr-bglogo-blur'), prOpacRange = document.getElementById('pr-bglogo-opacity'), prScaleRange = document.getElementById('pr-bglogo-scale');
+  const prValBlur = document.getElementById('val-pr-blur'), prValOpac = document.getElementById('val-pr-opac'), prValScale = document.getElementById('val-pr-scale');
+  prBlurRange.addEventListener('input', ()=> prValBlur.textContent = prBlurRange.value+'px');
+  prOpacRange.addEventListener('input', ()=> prValOpac.textContent = prOpacRange.value+'%');
+  prScaleRange.addEventListener('input', ()=> prValScale.textContent = prScaleRange.value+'%');
+
+  let rowCounter = 0;
+  let brandLogoDataUrl = null;
+  const rowLogos = {}; // rowId -> {home: dataURL|null, away: dataURL|null}
+
+  function setStatus(text, kind){
+    statusEl.style.display = text ? 'flex' : 'none';
+    statusEl.innerHTML = `<span>${kind==='err'?'⚠️':kind==='ok'?'✅':'⏳'}</span><span>${text}</span>`;
+  }
+
+  /* ---- Persistance de la marque (indépendante du Bulletin) ---- */
+  try{
+    const saved = JSON.parse(localStorage.getItem(BRAND_KEY) || 'null');
+    if(saved){
+      document.getElementById('pr-brand-name').value = saved.name || 'PARADOX RATIO';
+      document.getElementById('pr-brand-tagline').value = saved.tagline ?? 'ANALYSE • PRONOSTICS • EXPERT';
+      if(saved.logo){
+        brandLogoDataUrl = saved.logo;
+        const prev = document.getElementById('pr-brand-logo-preview');
+        prev.src = saved.logo; prev.style.display = 'block';
+        document.getElementById('pr-brand-logo-empty').style.display = 'none';
+      }
+    }
+  }catch(e){}
+
+  function persistBrand(){
+    try{
+      localStorage.setItem(BRAND_KEY, JSON.stringify({
+        name: document.getElementById('pr-brand-name').value,
+        tagline: document.getElementById('pr-brand-tagline').value,
+        logo: brandLogoDataUrl,
+      }));
+    }catch(e){}
+  }
+  document.getElementById('pr-brand-name').addEventListener('input', persistBrand);
+  document.getElementById('pr-brand-tagline').addEventListener('input', persistBrand);
+  document.getElementById('pr-brand-logo').addEventListener('change', e=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{
+      brandLogoDataUrl = ev.target.result;
+      const prev = document.getElementById('pr-brand-logo-preview');
+      prev.src = brandLogoDataUrl; prev.style.display = 'block';
+      document.getElementById('pr-brand-logo-empty').style.display = 'none';
+      persistBrand();
+    };
+    reader.readAsDataURL(file);
+  });
+  document.getElementById('pr-brand-logo-clear').addEventListener('click', ()=>{
+    brandLogoDataUrl = null;
+    document.getElementById('pr-brand-logo').value = '';
+    document.getElementById('pr-brand-logo-preview').style.display = 'none';
+    document.getElementById('pr-brand-logo-empty').style.display = 'flex';
+    persistBrand();
+  });
+
+  /* ---- Gestion des lignes de pronostic ---- */
+  function addRow(prefill){
+    const id = 'p' + (rowCounter++);
+    rowLogos[id] = {home:null, away:null};
+    const div = document.createElement('div');
+    div.className = 'match-card';
+    div.dataset.rowId = id;
+    const pick = prefill?.pick || '1', risk = prefill?.risk || 'low', conf = prefill?.conf || 75;
+    div.innerHTML = `
+      <div class="match-card-head"><b>Pronostic ${rowCounter}</b><button type="button" class="btn danger sm pr-remove-row">✕</button></div>
+      <div class="row">
+        <div class="field"><label>Compétition</label><input type="text" class="pr-match-competition" value="${prefill?.competition ?? (document.getElementById('pr-competition')?.value.trim()||'')}" placeholder="Ex : Premier League"></div>
+        <div class="field"><label>Date &amp; heure</label><input type="datetime-local" class="pr-match-datetime" value="${prefill?.datetime||''}"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Équipe A</label><input type="text" class="pr-home" value="${prefill?.home||''}" placeholder="Ex : Man City"></div>
+        <div class="field"><label>Équipe B</label><input type="text" class="pr-away" value="${prefill?.away||''}" placeholder="Ex : Arsenal"></div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Pronostic (1N2)</label>
+          <div class="seg pr-seg-pick">
+            <button type="button" data-v="1" class="${pick==='1'?'active':''}">1</button>
+            <button type="button" data-v="N" class="${pick==='N'?'active':''}">N</button>
+            <button type="button" data-v="2" class="${pick==='2'?'active':''}">2</button>
+          </div>
+        </div>
+        <div class="field"><label>Score prédit</label><input type="text" class="pr-score" value="${prefill?.score||''}" placeholder="2-1"></div>
+        <div class="field"><label>Cote</label><input type="text" class="pr-odds" value="${prefill?.odds||''}" placeholder="1.85"></div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Confiance <span class="val pr-conf-val">${conf}%</span></label>
+          <input type="range" class="pr-confidence" min="50" max="99" value="${conf}">
+        </div>
+        <div class="field">
+          <label>Risque</label>
+          <div class="seg pr-seg-risk">
+            <button type="button" data-v="low" class="${risk==='low'?'active':''}">🟢 Faible</button>
+            <button type="button" data-v="mid" class="${risk==='mid'?'active':''}">🟡 Moyen</button>
+            <button type="button" data-v="high" class="${risk==='high'?'active':''}">🔴 Élevé</button>
+          </div>
+        </div>
+      </div>
+      <div class="field"><label>Analyse rapide (optionnel)</label><input type="text" class="pr-note" value="${prefill?.note||''}" placeholder="Ex : Domicile solide, 4 clean-sheets sur 5"></div>
+      <div class="row" style="align-items:flex-end;">
+        <div class="field"><label>Logo équipe A <span class="pr-logo-status" data-team="home" style="color:var(--text-dim); text-transform:none; font-weight:400;">non recherché</span></label><input type="file" class="pr-home-logo-file" accept="image/*"></div>
+        <div class="field"><label>Logo équipe B <span class="pr-logo-status" data-team="away" style="color:var(--text-dim); text-transform:none; font-weight:400;">non recherché</span></label><input type="file" class="pr-away-logo-file" accept="image/*"></div>
+      </div>`;
+    rowsWrap.appendChild(div);
+
+    div.querySelectorAll('.pr-seg-pick button').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        div.querySelectorAll('.pr-seg-pick button').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+      });
+    });
+    div.querySelectorAll('.pr-seg-risk button').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        div.querySelectorAll('.pr-seg-risk button').forEach(x=>x.classList.remove('active'));
+        b.classList.add('active');
+      });
+    });
+    const confRange = div.querySelector('.pr-confidence');
+    confRange.addEventListener('input', ()=> div.querySelector('.pr-conf-val').textContent = confRange.value+'%');
+    div.querySelector('.pr-remove-row').addEventListener('click', ()=>{
+      delete rowLogos[id];
+      div.remove();
+    });
+    div.querySelector('.pr-home-logo-file').addEventListener('change', e=>{
+      const f = e.target.files[0]; if(!f) return;
+      const reader = new FileReader();
+      reader.onload = ev=>{
+        rowLogos[id].home = ev.target.result;
+        div.querySelector('.pr-logo-status[data-team="home"]').textContent = 'logo importé ✓';
+      };
+      reader.readAsDataURL(f);
+    });
+    div.querySelector('.pr-away-logo-file').addEventListener('change', e=>{
+      const f = e.target.files[0]; if(!f) return;
+      const reader = new FileReader();
+      reader.onload = ev=>{
+        rowLogos[id].away = ev.target.result;
+        div.querySelector('.pr-logo-status[data-team="away"]').textContent = 'logo importé ✓';
+      };
+      reader.readAsDataURL(f);
+    });
+    return div;
+  }
+  document.getElementById('pr-add-row').addEventListener('click', ()=> addRow());
+  const _d1 = new Date(); _d1.setDate(_d1.getDate() + ((6-_d1.getDay()+7)%7 || 7)); _d1.setHours(21,0,0,0);
+  const _d2 = new Date(_d1.getTime()); _d2.setDate(_d2.getDate()+1); _d2.setHours(18,30,0,0);
+  const _fmtLocal = d => new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,16);
+  addRow({home:'Manchester City', away:'Arsenal', pick:'1', score:'2-1', odds:'1.85', conf:78, risk:'low', note:'Solide à domicile, 4 clean-sheets sur 5.', competition:'Premier League', datetime:_fmtLocal(_d1)});
+  addRow({home:'Bayern Munich', away:'Dortmund', pick:'1', score:'3-1', odds:'1.65', conf:70, risk:'mid', note:'Derby imprévisible mais forme offensive excellente.', competition:'Bundesliga', datetime:_fmtLocal(_d2)});
+
+  async function resolveRowLogos(rowEl, id){
+    const home = rowEl.querySelector('.pr-home').value.trim() || 'Équipe A';
+    const away = rowEl.querySelector('.pr-away').value.trim() || 'Équipe B';
+    const overrides = rowLogos[id] || {};
+    const statusHome = rowEl.querySelector('.pr-logo-status[data-team="home"]');
+    const statusAway = rowEl.querySelector('.pr-logo-status[data-team="away"]');
+    let homeImg = null, awayImg = null;
+    if(overrides.home) homeImg = await cpLoadImageFromDataUrl(overrides.home);
+    else { statusHome.textContent = 'recherche…'; homeImg = await cpWikipediaTeamLogo(home); statusHome.textContent = homeImg ? 'trouvé via Wikipédia ✓' : 'introuvable (initiales)'; }
+    if(overrides.away) awayImg = await cpLoadImageFromDataUrl(overrides.away);
+    else { statusAway.textContent = 'recherche…'; awayImg = await cpWikipediaTeamLogo(away); statusAway.textContent = awayImg ? 'trouvé via Wikipédia ✓' : 'introuvable (initiales)'; }
+    return {
+      home, away, homeImg, awayImg,
+      pick: rowEl.querySelector('.pr-seg-pick button.active').dataset.v,
+      score: rowEl.querySelector('.pr-score').value.trim(),
+      odds: rowEl.querySelector('.pr-odds').value.trim(),
+      conf: +rowEl.querySelector('.pr-confidence').value,
+      risk: rowEl.querySelector('.pr-seg-risk button.active').dataset.v,
+      note: rowEl.querySelector('.pr-note').value.trim(),
+      competition: rowEl.querySelector('.pr-match-competition').value.trim(),
+      datetime: rowEl.querySelector('.pr-match-datetime').value,
+    };
+  }
+
+  function formatMatchDateTime(value){
+    if(!value) return '';
+    const d = new Date(value);
+    if(isNaN(d.getTime())) return '';
+    const datePart = d.toLocaleDateString('fr-FR', {weekday:'short', day:'2-digit', month:'short'}).replace('.','');
+    const timePart = d.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'});
+    return `${datePart} · ${timePart}`.toUpperCase();
+  }
+
+  /* ---- Dessin ---- */
+  function hexToRgb(hex){
+    const h = hex.replace('#','');
+    return { r: parseInt(h.substring(0,2),16), g: parseInt(h.substring(2,4),16), b: parseInt(h.substring(4,6),16) };
+  }
+  function roundedRect(x, y, w, h, r, fill, stroke, strokeWidth){
+    ctx.beginPath();
+    ctx.moveTo(x+r, y);
+    ctx.arcTo(x+w, y, x+w, y+h, r);
+    ctx.arcTo(x+w, y+h, x, y+h, r);
+    ctx.arcTo(x, y+h, x, y, r);
+    ctx.arcTo(x, y, x+w, y, r);
+    ctx.closePath();
+    if(fill){ ctx.fillStyle = fill; ctx.fill(); }
+    if(stroke && strokeWidth){ ctx.strokeStyle = stroke; ctx.lineWidth = strokeWidth; ctx.stroke(); }
+  }
+  function drawInitials(cx, cy, box, name){
+    ctx.save();
+    ctx.fillStyle = '#171a2c';
+    ctx.beginPath(); ctx.arc(cx, cy, box/2, 0, Math.PI*2); ctx.fill();
+    const initials = name.trim().split(/\s+/).slice(0,2).map(w=>w[0]).join('').toUpperCase() || '?';
+    ctx.fillStyle = '#e6e6e6';
+    ctx.font = `700 ${Math.round(box*0.36)}px 'Inter', sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(initials, cx, cy+2);
+    ctx.restore();
+  }
+  function drawFitImage(img, cx, cy, box){
+    if(!img) return false;
+    const ratio = Math.min(box/img.width, box/img.height);
+    const dw = img.width*ratio, dh = img.height*ratio;
+    ctx.drawImage(img, cx-dw/2, cy-dh/2, dw, dh);
+    return true;
+  }
+  function drawNeonGrid(W, H, color){
+    ctx.save();
+    ctx.strokeStyle = color; ctx.globalAlpha = .10; ctx.lineWidth = 1;
+    const step = 44;
+    for(let x=0; x<=W; x+=step){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for(let y=0; y<=H; y+=step){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    ctx.restore();
+  }
+  const riskColor = { low:'#37D67A', mid:'#E3B341', high:'#F0495B' };
+  const riskLabel = { low:'RISQUE FAIBLE', mid:'RISQUE MOYEN', high:'RISQUE ÉLEVÉ' };
+
+  async function generatePronostics(){
+    const rowEls = Array.from(rowsWrap.children);
+    if(!rowEls.length){ setStatus('Ajoute au moins un pronostic.', 'err'); return; }
+
+    document.getElementById('pr-generate').disabled = true;
+    setStatus('⏳ Récupération des logos via Wikipédia…', 'warn');
+
+    const accent = document.getElementById('pr-accent').value;
+    const accent2 = document.getElementById('pr-accent2').value;
+    const bgColor = document.getElementById('pr-bgcolor').value;
+    const showGrid = document.getElementById('pr-show-grid').checked;
+    const showGlow = document.getElementById('pr-show-glow').checked;
+    const showBadge = document.getElementById('pr-show-badge').checked;
+    const showOdds = document.getElementById('pr-show-odds').checked;
+    const showConf = document.getElementById('pr-show-conf').checked;
+    const showRisk = document.getElementById('pr-show-risk').checked;
+    const showFooter = document.getElementById('pr-show-footer').checked;
+    const brandName = document.getElementById('pr-brand-name').value.trim() || 'MA MARQUE';
+    const tagline = document.getElementById('pr-brand-tagline').value.trim();
+    const defaultCompetition = document.getElementById('pr-competition').value.trim();
+    const bettype = document.getElementById('pr-bettype').value.trim();
+
+    const rows = [];
+    for(const el of rowEls){
+      const id = el.dataset.rowId;
+      const r = await resolveRowLogos(el, id);
+      if(!r.competition) r.competition = defaultCompetition;
+      rows.push(r);
+    }
+
+    // Regroupement automatique par compétition (l'ordre des groupes suit leur première apparition)
+    const groups = []; const groupIndex = {};
+    rows.forEach(r=>{
+      const key = r.competition || '';
+      if(!(key in groupIndex)){ groupIndex[key] = { name:key, items:[] }; groups.push(groupIndex[key]); }
+      groupIndex[key].items.push(r);
+    });
+    const multiGroup = groups.length > 1;
+    const groupHeaderH = 74;
+
+    let brandImg = null;
+    if(brandLogoDataUrl) brandImg = await cpLoadImageFromDataUrl(brandLogoDataUrl);
+
+    setStatus('🎨 Composition de l\u2019image…', 'warn');
+
+    const W = 1080, cardH = 250, headerH = 300, footerH = showFooter ? 130 : 40;
+    const groupsHeaderTotal = groups.reduce((sum,g)=> sum + (g.name || multiGroup ? groupHeaderH : 0), 0);
+    const H = headerH + groupsHeaderTotal + rows.length*cardH + footerH;
+    canvas.width = W; canvas.height = H;
+
+    // Fond dégradé futuriste
+    const grad = ctx.createLinearGradient(0,0,W,H);
+    const c = hexToRgb(bgColor);
+    grad.addColorStop(0, `rgb(${Math.min(255,c.r+14)},${Math.min(255,c.g+16)},${Math.min(255,c.b+26)})`);
+    grad.addColorStop(1, `rgb(${Math.max(0,c.r-4)},${Math.max(0,c.g-2)},${Math.max(0,c.b+4)})`);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,W,H);
+
+    // Halos radiaux façon "glow"
+    [[W*0.08,H*0.03,accent],[W*0.95,H*0.12,accent2]].forEach(([x,y,col])=>{
+      const rg = ctx.createRadialGradient(x,y,0,x,y,420);
+      const rc = hexToRgb(col);
+      rg.addColorStop(0, `rgba(${rc.r},${rc.g},${rc.b},.18)`);
+      rg.addColorStop(1, `rgba(${rc.r},${rc.g},${rc.b},0)`);
+      ctx.fillStyle = rg; ctx.fillRect(0,0,W,H);
+    });
+
+    if(showGrid) drawNeonGrid(W, H, accent);
+
+    if(brandImg && document.getElementById('pr-bglogo-enable').checked){
+      cpDrawBackgroundLogo(ctx, canvas, brandImg, {
+        blur: +prBlurRange.value, opacityPct: +prOpacRange.value, scalePct: +prScaleRange.value,
+      });
+    }
+
+    // En-tête
+    const pad = 44, logoBox = 116;
+    if(brandImg) drawFitImage(brandImg, pad+logoBox/2, 46+logoBox/2, logoBox);
+    const titleX = pad + logoBox + 24;
+    ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+    ctx.fillStyle = '#eef2ff';
+    ctx.font = `700 42px 'Space Grotesk', sans-serif`;
+    ctx.fillText(brandName.toUpperCase(), titleX, 46+38);
+    ctx.fillStyle = accent;
+    ctx.font = `700 56px 'Space Grotesk', sans-serif`;
+    ctx.fillText('PRONOSTICS', titleX, 46+38+58);
+    if(tagline){
+      ctx.fillStyle = '#9aa3c8';
+      ctx.font = `600 18px 'Inter', sans-serif`;
+      ctx.fillText(tagline.toUpperCase(), titleX, 46+38+58+30);
+    }
+    if(showBadge){
+      const bw = 132, bh = 40;
+      const bx = W-pad-bw, by = 50;
+      const bgrad = ctx.createLinearGradient(bx,0,bx+bw,0);
+      bgrad.addColorStop(0,accent); bgrad.addColorStop(1,accent2);
+      roundedRect(bx, by, bw, bh, 20, bgrad, null, 0);
+      ctx.fillStyle = '#0B0D14'; ctx.font = `800 16px 'Space Grotesk', sans-serif`; ctx.textAlign='center';
+      ctx.fillText('★ EXPERT', bx+bw/2, by+bh/2+6);
+      ctx.textAlign='left';
+    }
+
+    const pills = [bettype].filter(Boolean);
+    if(pills.length){
+      ctx.font = `700 24px 'Inter', sans-serif`;
+      let px = W/2 - pills.reduce((s,t)=> s + ctx.measureText(t.toUpperCase()).width + 60, -20)/2;
+      const pillY = headerH - 62;
+      pills.forEach(t=>{
+        const tt = t.toUpperCase();
+        const tw = ctx.measureText(tt).width;
+        roundedRect(px, pillY, tw+44, 46, 23, 'rgba(255,255,255,0.05)', accent, 2);
+        ctx.fillStyle = '#e6e9ff'; ctx.textAlign='left';
+        ctx.fillText(tt, px+22, pillY+30);
+        px += tw+44+16;
+      });
+    }
+
+    // Cartes de pronostic — regroupées par compétition
+    let y = headerH;
+    for(const group of groups){
+      const drawGroupHeader = group.name || multiGroup;
+      if(drawGroupHeader){
+        const gTop = y+10, gH = groupHeaderH-16;
+        const ggrad = ctx.createLinearGradient(pad,0,W-pad,0);
+        ggrad.addColorStop(0, `${accent}33`); ggrad.addColorStop(1, 'rgba(255,255,255,0.02)');
+        roundedRect(pad, gTop, W-pad*2, gH, 14, ggrad, accent, 1.5);
+        ctx.fillStyle = accent; ctx.font = `800 22px 'Space Grotesk', sans-serif`; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+        ctx.fillText('🏆  ' + (group.name ? group.name.toUpperCase() : 'AUTRES PRONOSTICS'), pad+22, gTop+gH/2+8);
+        const countTxt = `${group.items.length} PRONOSTIC${group.items.length>1?'S':''}`;
+        ctx.font = `700 15px 'Inter', sans-serif`; ctx.fillStyle = '#9aa3c8'; ctx.textAlign='right';
+        ctx.fillText(countTxt, W-pad-22, gTop+gH/2+6);
+        ctx.textAlign='left';
+        y += groupHeaderH;
+      }
+
+      for(const row of group.items){
+      const top = y+16, bottom = y+cardH-16, cy = top + 74;
+      ctx.save();
+      if(showGlow){ ctx.shadowColor = accent; ctx.shadowBlur = 22; }
+      roundedRect(pad, top, W-pad*2, bottom-top, 22, 'rgba(13,16,28,0.72)', showGlow ? accent : 'rgba(255,255,255,0.1)', 2);
+      ctx.restore();
+
+      // Pick badge (1/N/2)
+      const pickCx = pad+56, pickCy = cy;
+      const pgrad = ctx.createLinearGradient(pickCx-34,0,pickCx+34,0);
+      pgrad.addColorStop(0,accent); pgrad.addColorStop(1,accent2);
+      ctx.beginPath(); ctx.arc(pickCx, pickCy, 34, 0, Math.PI*2); ctx.fillStyle = pgrad; ctx.fill();
+      ctx.fillStyle = '#0B0D14'; ctx.font = `800 30px 'Space Grotesk', sans-serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(row.pick, pickCx, pickCy+2);
+      ctx.textBaseline='alphabetic';
+
+      const nameA_x0 = pad+118, nameA_x1 = pad+330;
+      const logoA_cx = nameA_x1+64, vsCx = W/2, logoB_cx = W-nameA_x1-64;
+      const nameB_x0 = W-nameA_x1, nameB_x1 = W-pad-118;
+      const logoSz = 66;
+
+      if(!drawFitImage(row.homeImg, logoA_cx, cy, logoSz)) drawInitials(logoA_cx, cy, logoSz, row.home);
+      if(!drawFitImage(row.awayImg, logoB_cx, cy, logoSz)) drawInitials(logoB_cx, cy, logoSz, row.away);
+
+      ctx.font = `700 26px 'Inter', sans-serif`; ctx.fillStyle = '#eef1ff';
+      ctx.textAlign = 'left'; ctx.fillText(truncateText(row.home, W, 26, nameA_x1-nameA_x0), nameA_x0, cy+9);
+      ctx.textAlign = 'right'; ctx.fillText(truncateText(row.away, W, 26, nameB_x1-nameB_x0), nameB_x1, cy+9);
+      ctx.textAlign = 'left';
+
+      ctx.font = `700 22px 'Space Grotesk', sans-serif`; ctx.fillStyle = accent; ctx.textAlign='center';
+      ctx.fillText(row.score ? row.score : 'VS', vsCx, cy+8);
+      ctx.textAlign='left';
+
+      const dtText = formatMatchDateTime(row.datetime);
+      if(dtText){
+        ctx.font = `700 18px 'Inter', sans-serif`;
+        const tw = ctx.measureText(dtText).width;
+        roundedRect(pad+30, top+14, tw+28, 34, 17, 'rgba(255,255,255,.06)', 'rgba(255,255,255,.18)', 1.5);
+        ctx.fillStyle = '#c7cdea'; ctx.fillText('🕒 '+dtText, pad+44, top+38);
+      }
+
+      if(showOdds && row.odds){
+        const oddsText = `COTE ${row.odds}`;
+        ctx.font = `700 20px 'Inter', sans-serif`;
+        const tw = ctx.measureText(oddsText).width;
+        roundedRect(W-pad-tw-30, top+14, tw+30, 34, 17, 'rgba(255,255,255,.08)', accent2, 1.5);
+        ctx.fillStyle = '#e6e9ff'; ctx.fillText(oddsText, W-pad-tw-15, top+38);
+      }
+
+      let metaY = cy + 58;
+      const pickSide = row.pick === '2' ? 'right' : row.pick === 'N' ? 'center' : 'left';
+      if(showConf){
+        const barW = 280, barH = 10;
+        const barX = pickSide==='right' ? (W-pad-40-barW) : pickSide==='center' ? (W-barW)/2 : (pad+40);
+        const label = `CONFIANCE ${row.conf}%`;
+        ctx.font = `700 13px 'Inter', sans-serif`; ctx.fillStyle = '#9aa3c8';
+        if(pickSide==='right'){ ctx.textAlign='right'; ctx.fillText(label, barX+barW, metaY); ctx.textAlign='left'; }
+        else if(pickSide==='center'){ ctx.textAlign='center'; ctx.fillText(label, barX+barW/2, metaY); ctx.textAlign='left'; }
+        else { ctx.fillText(label, barX, metaY); }
+        roundedRect(barX, metaY+10, barW, barH, 5, 'rgba(255,255,255,.08)', null, 0);
+        const cgrad = ctx.createLinearGradient(barX,0,barX+barW,0);
+        cgrad.addColorStop(0,accent); cgrad.addColorStop(1,accent2);
+        const fillW = barW*(row.conf/100);
+        const fillX = pickSide==='right' ? (barX+barW-fillW) : barX;
+        roundedRect(fillX, metaY+10, fillW, barH, 5, cgrad, null, 0);
+      }
+      if(showRisk){
+        const rt = riskLabel[row.risk]; const rc = riskColor[row.risk];
+        ctx.font = `700 13px 'Inter', sans-serif`;
+        const tw = ctx.measureText(rt).width;
+        const riskBoxW = tw+26;
+        const rx = pickSide==='right' ? (pad+40) : (W-pad-40-riskBoxW);
+        const ry = metaY-4;
+        roundedRect(rx, ry, riskBoxW, 26, 13, `${rc}22`, rc, 1.5);
+        ctx.fillStyle = rc; ctx.fillText(rt, rx+13, ry+18);
+      }
+      if(row.note){
+        ctx.font = `italic 400 16px 'Inter', sans-serif`; ctx.fillStyle = '#7e88ad';
+        ctx.fillText(truncateText(row.note, W, 16, W-pad*2-80), pad+40, bottom-18);
+      }
+
+      y += cardH;
+      }
+    }
+
+    if(showFooter){
+      const footerTop = H - footerH;
+      ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(pad, footerTop+24); ctx.lineTo(W-pad, footerTop+24); ctx.stroke();
+      const tag = `${brandName.toUpperCase()} — PRONOSTICS RÉALISÉS PAR UN EXPERT`;
+      ctx.font = `700 27px 'Space Grotesk', sans-serif`;
+      const tw = ctx.measureText(tag).width;
+      ctx.fillStyle = accent; ctx.textAlign = 'left';
+      ctx.fillText(tag, W/2-tw/2, footerTop+52+27);
+    }
+
+    prExport.notifyGenerated();
+    setStatus('✅ Pronostics générés — choisis un nom/format à droite puis télécharge-les.', 'ok');
+    document.getElementById('pr-generate').disabled = false;
+  }
+
+  function truncateText(text, canvasW, fontSize, maxWidth){
+    ctx.font = `700 ${fontSize}px 'Inter', sans-serif`;
+    if(ctx.measureText(text).width <= maxWidth) return text;
+    let t = text;
+    while(t.length > 1 && ctx.measureText(t+'…').width > maxWidth) t = t.slice(0,-1);
+    return t + '…';
+  }
+
+  document.getElementById('pr-generate').addEventListener('click', generatePronostics);
+})();
+</script>
+
+</body>
+</html>
