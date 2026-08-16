@@ -1360,7 +1360,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
       exportSource.connect(previewAnalyser);
       exportSource.connect(dest);
 
-      const combined = new MediaStream([...stream.getVideoTracks(), ...dest.getAudioTracks()]);
+      const combined = new MediaStream([...stream.getVideoTracks(), ...dest.stream.getAudioTracks()]);
       if(combined.getVideoTracks().length === 0){
         throw new Error("Aucune piste vidéo capturée depuis le canvas.");
       }
