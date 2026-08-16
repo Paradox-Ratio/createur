@@ -964,6 +964,13 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   const canvas = document.getElementById('wave-canvas');
   const ctx = canvas.getContext('2d');
 
+  function withTimeout(promise, ms, label){
+    return Promise.race([
+      promise,
+      new Promise((_, reject)=> setTimeout(()=> reject(new Error(`${label} : délai dépassé après ${ms/1000}s`)), ms)),
+    ]);
+  }
+
   if(!AUDIOCONTEXT_SUPPORTED){
     document.getElementById('wave-support-warning').style.display = 'block';
     document.getElementById('wave-support-warning').textContent =
@@ -1315,96 +1322,134 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     exportStatus.textContent = "⏳ Préparation de l'export…";
     blockOverlay.style.display = 'flex';
 
-    await acquireWakeLock();
-    if(audioCtx.state === 'suspended') await audioCtx.resume();
-
-    const stream = canvas.captureStream(30);
-    const dest = audioCtx.createMediaStreamDestination();
-
-    exportSource = audioCtx.createBufferSource();
-    exportSource.buffer = audioBuffer;
-    previewAnalyser = audioCtx.createAnalyser();
-    previewAnalyser.fftSize = 256;
-    exportSource.connect(previewAnalyser);
-    exportSource.connect(dest);
-
-    const combined = new MediaStream([...stream.getVideoTracks(), ...dest.getAudioTracks()]);
-    const mime = pickSupportedMime();
-    exportRecorder = new MediaRecorder(combined, mime ? {mimeType:mime} : undefined);
-    exportChunks = [];
-
-    let safetyTimeout = null;
-    function finishExport(){
-      if(safetyTimeout){ clearTimeout(safetyTimeout); safetyTimeout = null; }
+    function abortExportWithError(err){
+      console.error('Export waveform : échec', err);
       if(countdownTick){ clearInterval(countdownTick); countdownTick = null; }
       exportEndWallClock = null;
       forceStopFn = null;
       blockOverlay.style.display = 'none';
+      exportProgressWrap.style.display = 'none';
       releaseWakeLock();
       exporting = false;
       exportBtn.disabled = false;
       cancelBtn.style.display = 'none';
-      if(exportCancelled){
-        exportStatus.textContent = '✕ Export annulé.';
-        exportProgressWrap.style.display = 'none';
-        return;
-      }
-      const blob = new Blob(exportChunks, {type:'video/webm'});
-      const url = URL.createObjectURL(blob);
-      exportVideoPreview.src = url;
-      exportVideoPreview.style.display = 'block';
-      exportDownloadLink.href = url;
-      exportDownloadLink.download = `waveform-${Date.now()}.webm`;
-      exportDownloadLink.style.display = 'flex';
-      exportProgressBar.style.width = '100%';
-      exportStatus.textContent = "✅ Vidéo prête — regarde l'aperçu puis télécharge-la.";
+      const detail = (err && err.message) ? err.message : String(err);
+      exportStatus.textContent = "❌ L'export n'a pas pu démarrer : " + detail;
+      alert("L'export a échoué : " + detail + "\n\nAstuce : vérifie que la page est bien ouverte en https:// (pas en fichier local), et réessaie.");
     }
-    forceStopFn = function(){
-      if(exportRecorder && exportRecorder.state !== 'inactive'){
-        exportStatus.textContent = "⏳ Finalisation forcée (l'export a pris plus de temps que prévu)…";
+
+    try{
+      await acquireWakeLock();
+
+      // Recrée le contexte audio s'il a été fermé ou n'existe pas (ex : après une erreur précédente).
+      if(!audioCtx || audioCtx.state === 'closed'){
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if(audioCtx.state === 'suspended') await withTimeout(audioCtx.resume(), 5000, "Reprise du contexte audio");
+
+      if(!canvas.captureStream){
+        throw new Error("captureStream() indisponible sur ce navigateur/contexte (HTTPS requis, pas un fichier local).");
+      }
+      const stream = canvas.captureStream(30);
+      const dest = audioCtx.createMediaStreamDestination();
+
+      exportSource = audioCtx.createBufferSource();
+      exportSource.buffer = audioBuffer;
+      previewAnalyser = audioCtx.createAnalyser();
+      previewAnalyser.fftSize = 256;
+      exportSource.connect(previewAnalyser);
+      exportSource.connect(dest);
+
+      const combined = new MediaStream([...stream.getVideoTracks(), ...dest.getAudioTracks()]);
+      if(combined.getVideoTracks().length === 0){
+        throw new Error("Aucune piste vidéo capturée depuis le canvas.");
+      }
+      const mime = pickSupportedMime();
+      exportRecorder = new MediaRecorder(combined, mime ? {mimeType:mime} : undefined);
+      exportChunks = [];
+
+      let safetyTimeout = null;
+      function finishExport(){
+        if(safetyTimeout){ clearTimeout(safetyTimeout); safetyTimeout = null; }
+        if(countdownTick){ clearInterval(countdownTick); countdownTick = null; }
+        exportEndWallClock = null;
+        forceStopFn = null;
+        blockOverlay.style.display = 'none';
+        releaseWakeLock();
+        exporting = false;
+        exportBtn.disabled = false;
+        cancelBtn.style.display = 'none';
+        if(exportCancelled){
+          exportStatus.textContent = '✕ Export annulé.';
+          exportProgressWrap.style.display = 'none';
+          return;
+        }
+        if(!exportChunks.length){
+          exportStatus.textContent = "❌ Export vide — aucune donnée enregistrée. Réessaie sans changer d'app.";
+          exportProgressWrap.style.display = 'none';
+          return;
+        }
+        const blob = new Blob(exportChunks, {type:'video/webm'});
+        const url = URL.createObjectURL(blob);
+        exportVideoPreview.src = url;
+        exportVideoPreview.style.display = 'block';
+        exportDownloadLink.href = url;
+        exportDownloadLink.download = `waveform-${Date.now()}.webm`;
+        exportDownloadLink.style.display = 'flex';
+        exportProgressBar.style.width = '100%';
+        exportStatus.textContent = "✅ Vidéo prête — regarde l'aperçu puis télécharge-la.";
+      }
+      forceStopFn = function(){
+        if(exportRecorder && exportRecorder.state !== 'inactive'){
+          exportStatus.textContent = "⏳ Finalisation forcée (l'export a pris plus de temps que prévu)…";
+          try{ exportSource.stop(); }catch(e){}
+          try{ exportRecorder.stop(); }catch(e){}
+        } else {
+          finishExport();
+        }
+      };
+
+      exportRecorder.onerror = e=> abortExportWithError(e.error || new Error('Erreur MediaRecorder'));
+      exportRecorder.ondataavailable = e=>{ if(e.data.size) exportChunks.push(e.data); };
+      exportRecorder.onstop = finishExport;
+
+      const startTs = audioCtx.currentTime;
+      exportSource.start(0);
+      exportRecorder.start();
+      drawFrame();
+
+      const durMs = audioBuffer.duration * 1000;
+      exportEndWallClock = Date.now() + durMs + 6000; // marge de 6s pour la finalisation
+      startCountdownDisplay();
+
+      const progressTick = setInterval(()=>{
+        const elapsed = (audioCtx.currentTime - startTs) * 1000;
+        const pct = Math.min(99, (elapsed/durMs)*100);
+        exportProgressBar.style.width = pct + '%';
+        exportStatus.textContent = `⏳ Export en cours… ${Math.round(pct)}%`;
+        if(elapsed >= durMs || exportCancelled) clearInterval(progressTick);
+      }, 200);
+
+      // Filet de sécurité (horloge murale, indépendante de audioCtx.currentTime qui se fige aussi
+      // en arrière-plan) : si l'enregistreur ne s'arrête jamais tout seul, on force l'arrêt.
+      safetyTimeout = setTimeout(forceStopFn, durMs + 8000);
+
+      exportSource.onended = ()=>{
+        if(exportRecorder && exportRecorder.state !== 'inactive') exportRecorder.stop();
+      };
+
+      function doCancel(){
+        exportCancelled = true;
         try{ exportSource.stop(); }catch(e){}
-        try{ exportRecorder.stop(); }catch(e){}
-      } else {
-        finishExport();
+        if(exportRecorder && exportRecorder.state !== 'inactive') exportRecorder.stop();
+        else finishExport();
       }
-    };
+      cancelBtn.onclick = doCancel;
+      blockCancelBtn.onclick = doCancel;
 
-    exportRecorder.ondataavailable = e=>{ if(e.data.size) exportChunks.push(e.data); };
-    exportRecorder.onstop = finishExport;
-
-    const startTs = audioCtx.currentTime;
-    exportSource.start(0);
-    exportRecorder.start();
-    drawFrame();
-
-    const durMs = audioBuffer.duration * 1000;
-    exportEndWallClock = Date.now() + durMs + 6000; // marge de 6s pour la finalisation
-    startCountdownDisplay();
-
-    const progressTick = setInterval(()=>{
-      const elapsed = (audioCtx.currentTime - startTs) * 1000;
-      const pct = Math.min(99, (elapsed/durMs)*100);
-      exportProgressBar.style.width = pct + '%';
-      exportStatus.textContent = `⏳ Export en cours… ${Math.round(pct)}%`;
-      if(elapsed >= durMs || exportCancelled) clearInterval(progressTick);
-    }, 200);
-
-    // Filet de sécurité (horloge murale, indépendante de audioCtx.currentTime qui se fige aussi
-    // en arrière-plan) : si l'enregistreur ne s'arrête jamais tout seul, on force l'arrêt.
-    safetyTimeout = setTimeout(forceStopFn, durMs + 8000);
-
-    exportSource.onended = ()=>{
-      if(exportRecorder && exportRecorder.state !== 'inactive') exportRecorder.stop();
-    };
-
-    function doCancel(){
-      exportCancelled = true;
-      try{ exportSource.stop(); }catch(e){}
-      if(exportRecorder && exportRecorder.state !== 'inactive') exportRecorder.stop();
-      else finishExport();
+    }catch(err){
+      abortExportWithError(err);
     }
-    cancelBtn.onclick = doCancel;
-    blockCancelBtn.onclick = doCancel;
   });
 
   setCanvasSize();
