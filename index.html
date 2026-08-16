@@ -509,6 +509,14 @@ N'oubliez pas de vous abonner et de laisser un pouce bleu si l'astuce vous plaî
 
 </main>
 
+<div id="export-block-overlay" style="display:none; position:fixed; inset:0; z-index:999; background:rgba(5,6,10,.96); backdrop-filter:blur(6px); flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:30px;">
+  <div style="font-size:44px; margin-bottom:14px;">🎬</div>
+  <h2 style="font-size:18px; margin-bottom:10px;">Export en cours — reste sur cette page</h2>
+  <p style="color:var(--text-dim); font-size:13.5px; max-width:340px; line-height:1.6; margin-bottom:18px;">Ne change pas d'application (WhatsApp, etc.) et n'éteins pas l'écran tant que ce n'est pas terminé — sinon ton téléphone met l'export en pause.</p>
+  <div id="export-block-countdown" style="font-family:'Space Grotesk',sans-serif; font-size:34px; color:var(--accent); margin-bottom:18px;">--:--</div>
+  <button class="btn danger sm" id="export-block-cancel">✕ Annuler l'export</button>
+</div>
+
 <footer>Traitement 100% local dans ton navigateur — aucun fichier n'est envoyé sur un serveur (les logos sont récupérés directement depuis Wikipédia par ton appareil).</footer>
 
 <script>
@@ -1259,9 +1267,32 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     if(wakeLock){ wakeLock.release().catch(()=>{}); wakeLock = null; }
   }
 
+  const blockOverlay = document.getElementById('export-block-overlay');
+  const blockCountdown = document.getElementById('export-block-countdown');
+  const blockCancelBtn = document.getElementById('export-block-cancel');
+  let exportEndWallClock = null; // Date.now() prévu de fin — horloge murale, ne se fige jamais
+  let countdownTick = null;
+  let forceStopFn = null; // assignée à chaque export, utilisée par la vérification de visibilité
+
+  function startCountdownDisplay(){
+    if(countdownTick) clearInterval(countdownTick);
+    countdownTick = setInterval(()=>{
+      const remainMs = Math.max(0, exportEndWallClock - Date.now());
+      const s = Math.ceil(remainMs/1000);
+      blockCountdown.textContent = `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+      if(remainMs <= 0) clearInterval(countdownTick);
+    }, 250);
+  }
+
   function onExportVisibilityChange(){
-    if(document.visibilityState === 'hidden' && exporting){
-      exportStatus.textContent = "⚠️ L'écran ou l'app est passé en arrière-plan — l'export peut se figer. Reviens sur cet onglet sans éteindre l'écran.";
+    if(!exporting) return;
+    if(document.visibilityState === 'hidden'){
+      exportStatus.textContent = "⚠️ Onglet passé en arrière-plan — l'export est mis en pause par ton téléphone.";
+    } else if(document.visibilityState === 'visible'){
+      // De retour sur l'onglet : si le temps prévu est déjà dépassé (le tab a été gelé pendant
+      // l'absence), on force l'arrêt tout de suite plutôt que d'attendre un setTimeout qui a pu
+      // lui-même être gelé et ne jamais se déclencher.
+      if(exportEndWallClock && Date.now() >= exportEndWallClock && forceStopFn) forceStopFn();
     }
   }
   document.addEventListener('visibilitychange', onExportVisibilityChange);
@@ -1281,7 +1312,8 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     exportDownloadLink.style.display = 'none';
     exportProgressWrap.style.display = 'block';
     exportProgressBar.style.width = '0%';
-    exportStatus.textContent = "⏳ Préparation de l'export… garde cet onglet ouvert et l'écran allumé jusqu'à la fin.";
+    exportStatus.textContent = "⏳ Préparation de l'export…";
+    blockOverlay.style.display = 'flex';
 
     await acquireWakeLock();
     if(audioCtx.state === 'suspended') await audioCtx.resume();
@@ -1304,6 +1336,10 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     let safetyTimeout = null;
     function finishExport(){
       if(safetyTimeout){ clearTimeout(safetyTimeout); safetyTimeout = null; }
+      if(countdownTick){ clearInterval(countdownTick); countdownTick = null; }
+      exportEndWallClock = null;
+      forceStopFn = null;
+      blockOverlay.style.display = 'none';
       releaseWakeLock();
       exporting = false;
       exportBtn.disabled = false;
@@ -1323,6 +1359,15 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
       exportProgressBar.style.width = '100%';
       exportStatus.textContent = "✅ Vidéo prête — regarde l'aperçu puis télécharge-la.";
     }
+    forceStopFn = function(){
+      if(exportRecorder && exportRecorder.state !== 'inactive'){
+        exportStatus.textContent = "⏳ Finalisation forcée (l'export a pris plus de temps que prévu)…";
+        try{ exportSource.stop(); }catch(e){}
+        try{ exportRecorder.stop(); }catch(e){}
+      } else {
+        finishExport();
+      }
+    };
 
     exportRecorder.ondataavailable = e=>{ if(e.data.size) exportChunks.push(e.data); };
     exportRecorder.onstop = finishExport;
@@ -1333,6 +1378,9 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     drawFrame();
 
     const durMs = audioBuffer.duration * 1000;
+    exportEndWallClock = Date.now() + durMs + 6000; // marge de 6s pour la finalisation
+    startCountdownDisplay();
+
     const progressTick = setInterval(()=>{
       const elapsed = (audioCtx.currentTime - startTs) * 1000;
       const pct = Math.min(99, (elapsed/durMs)*100);
@@ -1341,26 +1389,22 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
       if(elapsed >= durMs || exportCancelled) clearInterval(progressTick);
     }, 200);
 
-    // Filet de sécurité : si l'enregistreur ne s'arrête jamais tout seul (ex : onglet resté en
-    // arrière-plan trop longtemps), on force l'arrêt après la durée prévue + marge, pour ne
-    // jamais rester bloqué indéfiniment sur "Préparation de l'export…".
-    safetyTimeout = setTimeout(()=>{
-      if(exportRecorder && exportRecorder.state !== 'inactive'){
-        exportStatus.textContent = "⏳ Finalisation forcée (l'export a pris plus de temps que prévu)…";
-        try{ exportSource.stop(); }catch(e){}
-        exportRecorder.stop();
-      }
-    }, durMs + 8000);
+    // Filet de sécurité (horloge murale, indépendante de audioCtx.currentTime qui se fige aussi
+    // en arrière-plan) : si l'enregistreur ne s'arrête jamais tout seul, on force l'arrêt.
+    safetyTimeout = setTimeout(forceStopFn, durMs + 8000);
 
     exportSource.onended = ()=>{
       if(exportRecorder && exportRecorder.state !== 'inactive') exportRecorder.stop();
     };
 
-    cancelBtn.onclick = ()=>{
+    function doCancel(){
       exportCancelled = true;
       try{ exportSource.stop(); }catch(e){}
       if(exportRecorder && exportRecorder.state !== 'inactive') exportRecorder.stop();
-    };
+      else finishExport();
+    }
+    cancelBtn.onclick = doCancel;
+    blockCancelBtn.onclick = doCancel;
   });
 
   setCanvasSize();
